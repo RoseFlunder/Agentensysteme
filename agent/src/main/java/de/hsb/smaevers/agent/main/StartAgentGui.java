@@ -3,7 +3,7 @@ package de.hsb.smaevers.agent.main;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.hsb.smaevers.agent.agents.TestAgent;
+import de.hsb.smaevers.agent.agents.MyAgent;
 import jade.core.Profile;
 import jade.core.ProfileImpl;
 import jade.core.Runtime;
@@ -24,7 +24,7 @@ public class StartAgentGui {
 		
 		AgentContainer container = runtime.createAgentContainer(profile);
 		
-		AgentController agentController = container.createNewAgent("testAgent", TestAgent.class.getName(), args);
+		AgentController agentController = container.createNewAgent("testAgent", MyAgent.class.getName(), args);
 		agentController.start();
 	}
 

@@ -1,16 +1,16 @@
-package de.hsb.smaevers.agent.messages;
+package de.hsb.smaevers.agent.model.json;
 
 import de.aim.antworld.agent.AntWorldConsts;
 
-public class LoginMessage {
+public class LoginObject {
 	
 	private final String type = AntWorldConsts.ANT_ACTION_LOGIN;
 	private String color;
 	
-	public LoginMessage(){
+	public LoginObject(){
 	}
 	
-	public LoginMessage(String color) {
+	public LoginObject(String color) {
 		this.color = color;
 	}
 	

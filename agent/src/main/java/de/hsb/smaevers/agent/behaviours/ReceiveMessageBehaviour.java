@@ -10,16 +10,15 @@ public class ReceiveMessageBehaviour extends CyclicBehaviour {
 
 	private static final long serialVersionUID = 1L;
 	
-	private Logger LOG;
+	private Logger log;
 	
 	@Override
-	public void action() {
-		
+	public void action() {		
 		ACLMessage msg = myAgent.receive();
 		
 		if (msg != null){
-			LOG.debug("message from {}", msg.getSender().getLocalName());
-			LOG.debug(msg.toString());
+			log.debug("message from {}", msg.getSender().getLocalName());
+			log.debug(msg.toString());
 		} else {
 			block();
 		}
@@ -29,7 +28,7 @@ public class ReceiveMessageBehaviour extends CyclicBehaviour {
 	@Override
 	public void onStart() {
 		super.onStart();
-		LOG = LoggerFactory.getLogger(myAgent.getLocalName());
+		log = LoggerFactory.getLogger(myAgent.getLocalName());
 	}
 
 }

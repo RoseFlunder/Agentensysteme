@@ -1,0 +1,3 @@
+22:32:55.129 [main] DEBUG d.h.s.agent.main.StartAgentGui - Application starting..
+22:32:55.470 [testAgent] DEBUG testAgent - Test agent with name: testAgent starting
+22:32:55.481 [testAgent] DEBUG testAgent - Found antword agent agent: antWorld036feaa4-0726-4f74-a625-9a5ac8d4e114

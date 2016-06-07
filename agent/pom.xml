@@ -80,7 +80,7 @@
 							<classpathPrefix>lib/</classpathPrefix>
 						</manifest>
 						<manifestEntries>
-							<Class-Path>/config lib/jade-4.4.0.jar lib/antworld.jar</Class-Path>
+							<Class-Path>config/ lib/jade-4.4.0.jar lib/antworld.jar</Class-Path>
 						</manifestEntries>
 					</archive>
 					<excludes>

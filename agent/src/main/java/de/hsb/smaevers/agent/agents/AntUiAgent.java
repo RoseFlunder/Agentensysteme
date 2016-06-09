@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import de.hsb.smaevers.agent.ui.AgentUi;
 import jade.gui.GuiAgent;
 import jade.gui.GuiEvent;
+import jade.wrapper.StaleProxyException;
 
 /**
  * Agent that is only responsible for the GUI.
@@ -45,6 +46,12 @@ public class AntUiAgent extends jade.gui.GuiAgent {
 			//send message to all ants to log off
 			doDelete();
 			LOG.debug("Called GUI agent delete");
+			
+			try {
+				getContainerController().kill();
+			} catch (StaleProxyException e) {
+				LOG.error(e.getMessage(), e);
+			}
 			break;
 
 		default:

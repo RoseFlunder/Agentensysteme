@@ -2,8 +2,10 @@ package de.hsb.smaevers.agent.model;
 
 public interface IWorld {
 	
-	public void put(Integer x, Integer y, Tile tile);
+	public void put(Tile tile);
 
 	public Tile get(Integer x, Integer y);
+	
+	public Iterable<Tile> getAllTiles();
 	
 }

@@ -92,7 +92,7 @@ public class AgentUi {
 			}
 				
 			LOG.debug("Add new tile at {}|{}", t.getX(), t.getY());
-			UITile uiTile = new UITile(t);
+			UITile uiTile = UITile.getInstance(t);
 			uiTile.setLocation(xPos, yPos);
 			add(uiTile);
 			

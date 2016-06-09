@@ -24,6 +24,16 @@ public class UITile extends JComponent {
 		setSize(WIDTH, HEIGHT);
 	}
 	
+	public static UITile getInstance(Tile t) {
+		switch (t.getType()) {
+		case TRAP:
+			return new UITrapTile(t);
+
+		default:
+			return new UITile(t);
+		}
+	}
+	
 	@Override
 	protected void paintComponent(Graphics g) {
 		Graphics2D g2 = (Graphics2D) g;

@@ -7,6 +7,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
 import javax.swing.JFrame;
+import javax.swing.JLayeredPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 
@@ -18,7 +19,7 @@ import de.hsb.smaevers.agent.model.Tile;
 import de.hsb.smaevers.agent.model.TileType;
 import jade.gui.GuiEvent;
 
-public class AgentUi {
+public class AntClientUi {
 	private final Logger LOG = LoggerFactory.getLogger(getClass());
 	
 	private final JFrame frame;
@@ -26,7 +27,7 @@ public class AgentUi {
 
 	private WorldPanel worldPanel;
 	
-	public AgentUi(final AntUiAgent agent){
+	public AntClientUi(final AntUiAgent agent){
 		this.agent = agent;
 		
 		LOG.debug("Constructor of UI called");
@@ -51,19 +52,23 @@ public class AgentUi {
 		
 		worldPanel.putTile(new Tile(0, 0, TileType.ROCK));
 		worldPanel.putTile(new Tile(1, 0, TileType.TRAP));
-		
+		worldPanel.putTile(new Tile(2, 1, TileType.FOOD));
 		worldPanel.putTile(new Tile(2, 2, TileType.UNKOWN));
 		worldPanel.putTile(new Tile(3, 2, TileType.STANDARD));
 		
 		worldPanel.putTile(new Tile(10, 10, TileType.STANDARD));
 		worldPanel.putTile(new Tile(10, 10, TileType.ROCK));
 		
+		Ant ant = new Ant();
+		ant.setLocation(3, 2);
+		worldPanel.add(ant, 1);
+		
 		frame.setSize(800, 600);
 		frame.setLocationRelativeTo(null);
 		frame.setVisible(true);
 	}
 	
-	class WorldPanel extends JPanel {
+	class WorldPanel extends JLayeredPane {
 
 		private static final long serialVersionUID = 1L;
 		
@@ -94,7 +99,7 @@ public class AgentUi {
 			LOG.debug("Add new tile at {}|{}", t.getX(), t.getY());
 			UITile uiTile = UITile.getInstance(t);
 			uiTile.setLocation(xPos, yPos);
-			add(uiTile);
+			add(uiTile, 0);
 			
 			validate();
 			repaint();

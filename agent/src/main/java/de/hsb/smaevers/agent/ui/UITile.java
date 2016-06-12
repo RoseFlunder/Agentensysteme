@@ -28,6 +28,18 @@ public class UITile extends JComponent {
 		switch (t.getType()) {
 		case TRAP:
 			return new UITrapTile(t);
+			
+		case STANDARD:
+			return new UIStandardTile(t);
+			
+		case ROCK:
+			return new UIRockTile(t);
+		
+		case UNKOWN:
+			return new UIUnkownTile(t);
+			
+		case FOOD:
+			return new UIFoodTile(t);
 
 		default:
 			return new UITile(t);

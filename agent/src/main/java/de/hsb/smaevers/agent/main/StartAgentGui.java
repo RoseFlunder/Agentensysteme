@@ -8,6 +8,8 @@ import de.hsb.smaevers.agent.agents.MyAgent;
 import jade.core.Profile;
 import jade.core.ProfileImpl;
 import jade.core.Runtime;
+import jade.core.messaging.TopicManagementHelper;
+import jade.core.messaging.TopicManagementService;
 import jade.wrapper.AgentContainer;
 import jade.wrapper.AgentController;
 import jade.wrapper.StaleProxyException;
@@ -22,6 +24,7 @@ public class StartAgentGui {
 		
 		Runtime runtime = Runtime.instance();
 		Profile profile = new ProfileImpl("localhost", -1, null, false);
+		profile.setParameter(Profile.SERVICES, "jade.core.messaging.TopicManagementService");
 		
 		AgentContainer container = runtime.createAgentContainer(profile);
 		

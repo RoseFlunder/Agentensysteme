@@ -9,29 +9,27 @@ import javax.imageio.ImageIO;
 
 import de.hsb.smaevers.agent.model.Tile;
 
-public class UITrapTile extends UITile {
-
+public class UIStandardTile extends UITile {
 	private static final long serialVersionUID = 1L;
-	
+
 	private static Image img = null;
-	
+
 	static {
 		try {
-			img = ImageIO.read(UITrapTile.class.getClassLoader().getResource("trap.png"));
+			img = ImageIO.read(UIStandardTile.class.getClassLoader().getResource("standard.png"));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 
-	public UITrapTile(Tile tile) {
+	public UIStandardTile(Tile tile) {
 		super(tile);
 	}
-	
+
 	@Override
 	protected void paintComponent(Graphics g) {
 		Graphics2D g2 = (Graphics2D) g;
-		
+
 		g2.drawImage(img, 0, 0, null);
 	}
-
 }

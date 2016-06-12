@@ -9,7 +9,7 @@ import javax.imageio.ImageIO;
 
 import de.hsb.smaevers.agent.model.Tile;
 
-public class UITrapTile extends UITile {
+public class UIFoodTile extends UITile {
 
 	private static final long serialVersionUID = 1L;
 	
@@ -17,13 +17,13 @@ public class UITrapTile extends UITile {
 	
 	static {
 		try {
-			img = ImageIO.read(UITrapTile.class.getClassLoader().getResource("trap.png"));
+			img = ImageIO.read(UIFoodTile.class.getClassLoader().getResource("food.png"));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 
-	public UITrapTile(Tile tile) {
+	public UIFoodTile(Tile tile) {
 		super(tile);
 	}
 	

@@ -8,10 +8,13 @@ import org.slf4j.LoggerFactory;
 import com.google.gson.Gson;
 
 import de.aim.antworld.agent.AntWorldConsts;
-import de.hsb.smaevers.agent.behaviours.ReceiveMessageBehaviour;
 import de.hsb.smaevers.agent.model.json.LoginObject;
+import jade.core.AID;
 import jade.core.Agent;
+import jade.core.ServiceException;
+import jade.core.behaviours.CyclicBehaviour;
 import jade.core.behaviours.OneShotBehaviour;
+import jade.core.messaging.TopicManagementHelper;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
@@ -24,6 +27,8 @@ public class MyAgent extends Agent {
 	
 	private Logger log;
 
+	private AID updateTileTopic;
+
 	@Override
 	protected void setup() {
 		super.setup();
@@ -31,8 +36,42 @@ public class MyAgent extends Agent {
 		
 		log.debug("Test agent with name: {} starting", getLocalName());
 		
-		addBehaviour(new LoginBehaviour());
-		addBehaviour(new ReceiveMessageBehaviour());
+		try {
+			TopicManagementHelper hlp = (TopicManagementHelper) getHelper(TopicManagementHelper.SERVICE_NAME);
+			updateTileTopic = hlp.createTopic(AntUiAgent.TILE_UPDATE);
+			
+			addBehaviour(new ReceiveMessageBehaviour());
+			addBehaviour(new LoginBehaviour());
+			
+		} catch (ServiceException e) {
+			log.error(e.getMessage(), e);
+			doDelete();			
+		}
+	}
+	
+	private void sendTileUpdateMessage(){
+		ACLMessage msg = new ACLMessage(ACLMessage.CONFIRM);
+		msg.setSender(getAID());
+		msg.addReceiver(updateTileTopic);
+		msg.setContent("test");
+		send(msg);
+	}
+	
+	class ReceiveMessageBehaviour extends CyclicBehaviour {
+
+		private static final long serialVersionUID = 1L;
+
+		@Override
+		public void action() {
+			ACLMessage msg = receive();
+			if (msg != null){
+				log.debug(msg.toString());
+				sendTileUpdateMessage();
+			} else {
+				block();
+			}		
+		}
+		
 	}
 	
 	class LoginBehaviour extends OneShotBehaviour {

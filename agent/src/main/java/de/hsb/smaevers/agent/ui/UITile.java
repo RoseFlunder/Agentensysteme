@@ -4,11 +4,13 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.util.Objects;
+import java.awt.Image;
+import java.io.IOException;
 
+import javax.imageio.ImageIO;
 import javax.swing.JComponent;
 
-import de.hsb.smaevers.agent.model.Tile;
+import de.hsb.smaevers.agent.model.json.CellObject;
 
 public class UITile extends JComponent {
 
@@ -17,33 +19,31 @@ public class UITile extends JComponent {
 	public static final int WIDTH = 50;
 	public static final int HEIGHT = 50;
 	
-	private Tile tile;
+	private static Image imgFood = null;
+	private static Image imgStandard = null;
+	private static Image imgRock = null;
+	private static Image imgTrap = null;
+	private static Image imgUnknown = null;
+	private static Image imgStart = null;
 	
-	public UITile(Tile tile) {
-		this.tile = tile;
-		setSize(WIDTH, HEIGHT);
+	static {
+		try {
+			imgFood = ImageIO.read(UITile.class.getClassLoader().getResource("images/food.png"));
+			imgStandard = ImageIO.read(UITile.class.getClassLoader().getResource("images/standard.png"));
+			imgRock = ImageIO.read(UITile.class.getClassLoader().getResource("images/rock.png"));
+			imgTrap = ImageIO.read(UITile.class.getClassLoader().getResource("images/trap.png"));
+			imgUnknown = ImageIO.read(UITile.class.getClassLoader().getResource("images/unknown.png"));
+			imgStart = ImageIO.read(UITile.class.getClassLoader().getResource("images/start2.png"));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 	
-	public static UITile getInstance(Tile t) {
-		switch (t.getType()) {
-		case TRAP:
-			return new UITrapTile(t);
-			
-		case STANDARD:
-			return new UIStandardTile(t);
-			
-		case ROCK:
-			return new UIRockTile(t);
-		
-		case UNKOWN:
-			return new UIUnkownTile(t);
-			
-		case FOOD:
-			return new UIFoodTile(t);
-
-		default:
-			return new UITile(t);
-		}
+	private CellObject cell;
+	
+	public UITile(CellObject cell) {
+		this.cell = cell;
+		setSize(WIDTH, HEIGHT);
 	}
 	
 	@Override
@@ -51,20 +51,32 @@ public class UITile extends JComponent {
 		Graphics2D g2 = (Graphics2D) g;
 		
 		
-		switch (tile.getType()) {
-		case STANDARD:
-			g2.setColor(Color.GREEN);
-			g2.fillRect(0, 0, getWidth(), getHeight());
+		switch (cell.getType()) {
+		case FREE:
+			if (cell.getFood() > 0){
+				g2.drawImage(imgFood, 0, 0, null);
+				g2.setColor(Color.BLACK);
+				g2.drawString(Integer.toString(cell.getFood()), WIDTH / 2, HEIGHT - 5);
+			} else {
+				g2.drawImage(imgStandard, 0, 0, null);
+			}
+			
 			break;
 			
-		case ROCK:
-			g2.setColor(Color.GRAY);
-			g2.fillRect(0, 0, getWidth(), getHeight());
+		case OBSTACLE:
+			g2.drawImage(imgRock, 0, 0, null);
 			break;
 			
-		case TRAP:
-			g2.setColor(Color.BLACK);
-			g2.fillRect(0, 0, getWidth(), getHeight());
+		case PIT:
+			g2.drawImage(imgTrap, 0, 0, null);
+			break;
+			
+		case START:
+			g2.drawImage(imgStart, 0, 0, null);
+			break;
+			
+		case UNKOWN:
+			g2.drawImage(imgUnknown, 0, 0, null);
 			break;
 
 		default:
@@ -81,20 +93,20 @@ public class UITile extends JComponent {
 		return new Dimension(WIDTH, HEIGHT);
 	}
 
-	@Override
-	public int hashCode() {
-		return tile.hashCode();
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		if (obj != null && obj instanceof UITile){
-			UITile t = (UITile) obj;
-			
-			return Objects.equals(tile, t.tile);
-		}
-		
-		return false;
-	}
+//	@Override
+//	public int hashCode() {
+//		return tile.hashCode();
+//	}
+//
+//	@Override
+//	public boolean equals(Object obj) {
+//		if (obj != null && obj instanceof UITile){
+//			UITile t = (UITile) obj;
+//			
+//			return Objects.equals(tile, t.tile);
+//		}
+//		
+//		return false;
+//	}
 	
 }

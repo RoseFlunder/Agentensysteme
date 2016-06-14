@@ -1,11 +1,13 @@
 package de.hsb.smaevers.agent.model;
 
+import de.hsb.smaevers.agent.model.json.CellObject;
+
 public interface IWorld {
 	
-	public void put(Tile tile);
+	public void put(CellObject tile);
 
-	public Tile get(Integer x, Integer y);
+	public CellObject get(Integer x, Integer y);
 	
-	public Iterable<Tile> getAllTiles();
+	public Iterable<CellObject> getAllTiles();
 	
 }

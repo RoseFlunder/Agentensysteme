@@ -5,6 +5,9 @@ import javax.swing.SwingUtilities;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.gson.Gson;
+
+import de.hsb.smaevers.agent.model.json.PerceptionObject;
 import de.hsb.smaevers.agent.ui.AntClientUi;
 import jade.core.AID;
 import jade.core.ServiceException;
@@ -13,6 +16,7 @@ import jade.core.messaging.TopicManagementHelper;
 import jade.gui.GuiAgent;
 import jade.gui.GuiEvent;
 import jade.lang.acl.ACLMessage;
+import jade.lang.acl.MessageTemplate;
 import jade.wrapper.StaleProxyException;
 
 /**
@@ -31,7 +35,10 @@ public class AntUiAgent extends jade.gui.GuiAgent {
 	
 	private final Logger LOG = LoggerFactory.getLogger(GuiAgent.class);
 	
+	private final Gson gson = new Gson();
 	private AntClientUi antClientUi;
+
+	private AID topicUpdate;
 	
 	@Override
 	protected void setup() {
@@ -40,8 +47,8 @@ public class AntUiAgent extends jade.gui.GuiAgent {
 		try {
 			TopicManagementHelper hlp = (TopicManagementHelper) getHelper(TopicManagementHelper.SERVICE_NAME);
 			
-			AID topic = hlp.createTopic(TILE_UPDATE);
-			hlp.register(topic);
+			topicUpdate = hlp.createTopic(TILE_UPDATE);
+			hlp.register(topicUpdate);
 			
 			addBehaviour(new ReceiveMessages(this));			
 			
@@ -68,9 +75,18 @@ public class AntUiAgent extends jade.gui.GuiAgent {
 		private static final long serialVersionUID = 1L;
 
 		@Override
-		public void action() {			
-			ACLMessage msg = receive();
+		public void action() {
+			MessageTemplate updateTemplate = MessageTemplate.MatchTopic(topicUpdate);
+			ACLMessage msg = receive(updateTemplate);
 			if (msg != null){
+				LOG.debug("update message received");
+				PerceptionObject perceptionObject = gson.fromJson(msg.getContent(), PerceptionObject.class);
+				SwingUtilities.invokeLater(new Runnable() {
+					@Override
+					public void run() {
+						antClientUi.updateCell(perceptionObject.getCell());
+					}
+				});
 				LOG.debug(msg.toString());
 			} else {
 				block();

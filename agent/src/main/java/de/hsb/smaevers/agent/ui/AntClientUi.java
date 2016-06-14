@@ -8,15 +8,14 @@ import java.awt.event.WindowEvent;
 
 import javax.swing.JFrame;
 import javax.swing.JLayeredPane;
-import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.hsb.smaevers.agent.agents.AntUiAgent;
-import de.hsb.smaevers.agent.model.Tile;
-import de.hsb.smaevers.agent.model.TileType;
+import de.hsb.smaevers.agent.model.json.CellObject;
+import de.hsb.smaevers.agent.model.json.CellType;
 import jade.gui.GuiEvent;
 
 public class AntClientUi {
@@ -50,22 +49,25 @@ public class AntClientUi {
 		frame.add(scrollPane, BorderLayout.CENTER);
 		
 		
-		worldPanel.putTile(new Tile(0, 0, TileType.ROCK));
-		worldPanel.putTile(new Tile(1, 0, TileType.TRAP));
-		worldPanel.putTile(new Tile(2, 1, TileType.FOOD));
-		worldPanel.putTile(new Tile(2, 2, TileType.UNKOWN));
-		worldPanel.putTile(new Tile(3, 2, TileType.STANDARD));
-		
-		worldPanel.putTile(new Tile(10, 10, TileType.STANDARD));
-		worldPanel.putTile(new Tile(10, 10, TileType.ROCK));
+		worldPanel.putTile(new CellObject(0, 0, CellType.OBSTACLE));
+		worldPanel.putTile(new CellObject(1, 1, CellType.PIT));
+		CellObject cell = new CellObject(2, 2, CellType.FREE);
+		cell.setFood(2);
+		worldPanel.putTile(cell);
+		worldPanel.putTile(new CellObject(3, 3, CellType.START));
+		worldPanel.putTile(new CellObject(4, 4, CellType.FREE));
 		
 		Ant ant = new Ant();
-		ant.setLocation(3, 2);
+		ant.setLocation(2, 2);
 		worldPanel.add(ant, 1);
 		
 		frame.setSize(800, 600);
 		frame.setLocationRelativeTo(null);
 		frame.setVisible(true);
+	}
+	
+	public void updateCell(CellObject cell){
+		worldPanel.putTile(cell);
 	}
 	
 	class WorldPanel extends JLayeredPane {
@@ -79,9 +81,9 @@ public class AntClientUi {
 			setLayout(null);
 		}
 		
-		public void putTile(Tile t){
-			int xPos = t.getX() * UITile.WIDTH;
-			int yPos = t.getY() * UITile.HEIGHT;
+		public void putTile(CellObject cell){
+			int xPos = cell.getCol() * UITile.WIDTH;
+			int yPos = cell.getRow() * UITile.HEIGHT;
 			
 			if (xPos + UITile.WIDTH > maxX)
 				maxX = xPos + UITile.WIDTH;
@@ -92,12 +94,10 @@ public class AntClientUi {
 			
 			Component comp = WorldPanel.this.getComponentAt(xPos, yPos);
 			if (comp != null && comp instanceof UITile){
-				LOG.debug("Remove old tile at {}|{}", t.getX(), t.getY());
 				remove(comp);
 			}
 				
-			LOG.debug("Add new tile at {}|{}", t.getX(), t.getY());
-			UITile uiTile = UITile.getInstance(t);
+			UITile uiTile = new UITile(cell);
 			uiTile.setLocation(xPos, yPos);
 			add(uiTile, 0);
 			

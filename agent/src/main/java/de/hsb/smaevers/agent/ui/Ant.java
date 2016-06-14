@@ -20,7 +20,7 @@ public class Ant extends JComponent {
 	
 	static {
 		try {
-			img = ImageIO.read(Ant.class.getClassLoader().getResource("ant.png"));
+			img = ImageIO.read(Ant.class.getClassLoader().getResource("images/ant.png"));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

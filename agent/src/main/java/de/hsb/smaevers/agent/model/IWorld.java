@@ -6,7 +6,7 @@ public interface IWorld {
 	
 	public void put(CellObject tile);
 
-	public CellObject get(Integer x, Integer y);
+	public CellObject get(Integer col, Integer row);
 	
 	public Iterable<CellObject> getAllTiles();
 	

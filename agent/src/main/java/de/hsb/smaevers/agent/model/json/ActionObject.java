@@ -2,15 +2,15 @@ package de.hsb.smaevers.agent.model.json;
 
 public class ActionObject {
 	
-	private final String type;
+	private final ActionType type;
 	private final String color;
 	
-	public ActionObject(String type, String color) {
+	public ActionObject(ActionType type, String color) {
 		this.type = type;
 		this.color = color;
 	}
 	
-	public String getType() {
+	public ActionType getType() {
 		return type;
 	}
 

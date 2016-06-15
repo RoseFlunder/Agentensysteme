@@ -21,8 +21,10 @@ public class World implements IWorld {
 	}
 
 	@Override
-	public CellObject get(Integer x, Integer y) {
-		return data.get(x).get(y);
+	public CellObject get(Integer col, Integer row) {
+		if (data.containsKey(col))
+			return data.get(col).get(row);
+		return null;
 	}
 
 	@Override

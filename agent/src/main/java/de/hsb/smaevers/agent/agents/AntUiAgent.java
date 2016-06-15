@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
 
+import de.hsb.smaevers.agent.model.json.CellObject;
 import de.hsb.smaevers.agent.model.json.PerceptionObject;
 import de.hsb.smaevers.agent.ui.AntClientUi;
 import jade.core.AID;
@@ -29,6 +30,7 @@ public class AntUiAgent extends jade.gui.GuiAgent {
 	private static final long serialVersionUID = 1L;
 	
 	public static final String TILE_UPDATE = "TILE_UPDATE";
+	public static final String ANT_POSITION_UPDATE = "ANT_POSITION_UPDATE";
 	
 	public static final int EVENT_CLOSE = 0;
 	
@@ -39,6 +41,7 @@ public class AntUiAgent extends jade.gui.GuiAgent {
 	private AntClientUi antClientUi;
 
 	private AID topicUpdate;
+	private AID topicPosition;
 	
 	@Override
 	protected void setup() {
@@ -49,6 +52,9 @@ public class AntUiAgent extends jade.gui.GuiAgent {
 			
 			topicUpdate = hlp.createTopic(TILE_UPDATE);
 			hlp.register(topicUpdate);
+			
+			topicPosition = hlp.createTopic(ANT_POSITION_UPDATE);
+			hlp.register(topicPosition);
 			
 			addBehaviour(new ReceiveMessages(this));			
 			
@@ -80,17 +86,25 @@ public class AntUiAgent extends jade.gui.GuiAgent {
 			ACLMessage msg = receive(updateTemplate);
 			if (msg != null){
 				LOG.debug("update message received");
-				PerceptionObject perceptionObject = gson.fromJson(msg.getContent(), PerceptionObject.class);
+				CellObject cell = gson.fromJson(msg.getContent(), CellObject.class);
 				SwingUtilities.invokeLater(new Runnable() {
 					@Override
 					public void run() {
-						antClientUi.updateCell(perceptionObject.getCell());
+						antClientUi.updateCell(cell);
 					}
 				});
 				LOG.debug(msg.toString());
-			} else {
-				block();
 			}
+			
+			MessageTemplate updatePositoin = MessageTemplate.MatchTopic(topicPosition);
+			msg = receive(updatePositoin);
+			if (msg != null){
+				LOG.debug("position update received");
+				
+			}
+			
+			if (msg == null)
+				block();
 		}
 		
 	}

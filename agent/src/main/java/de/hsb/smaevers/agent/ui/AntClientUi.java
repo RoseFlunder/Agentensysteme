@@ -49,17 +49,17 @@ public class AntClientUi {
 		frame.add(scrollPane, BorderLayout.CENTER);
 		
 		
-		worldPanel.putTile(new CellObject(0, 0, CellType.OBSTACLE));
-		worldPanel.putTile(new CellObject(1, 1, CellType.PIT));
-		CellObject cell = new CellObject(2, 2, CellType.FREE);
-		cell.setFood(2);
-		worldPanel.putTile(cell);
-		worldPanel.putTile(new CellObject(3, 3, CellType.START));
-		worldPanel.putTile(new CellObject(4, 4, CellType.FREE));
-		
-		Ant ant = new Ant();
-		ant.setLocation(2, 2);
-		worldPanel.add(ant, 1);
+//		worldPanel.putTile(new CellObject(0, 0, CellType.OBSTACLE));
+//		worldPanel.putTile(new CellObject(1, 1, CellType.PIT));
+//		CellObject cell = new CellObject(2, 2, CellType.FREE);
+//		cell.setFood(2);
+//		worldPanel.putTile(cell);
+//		worldPanel.putTile(new CellObject(3, 3, CellType.START));
+//		worldPanel.putTile(new CellObject(4, 4, CellType.FREE));
+//		
+//		Ant ant = new Ant();
+//		ant.setLocation(2, 2);
+//		worldPanel.add(ant, 1);
 		
 		frame.setSize(800, 600);
 		frame.setLocationRelativeTo(null);

@@ -1,5 +1,10 @@
 package de.hsb.smaevers.agent.agents;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -12,6 +17,9 @@ import de.aim.antworld.agent.AntWorldConsts;
 import de.hsb.smaevers.agent.model.IWorld;
 import de.hsb.smaevers.agent.model.World;
 import de.hsb.smaevers.agent.model.json.ActionObject;
+import de.hsb.smaevers.agent.model.json.ActionType;
+import de.hsb.smaevers.agent.model.json.CellObject;
+import de.hsb.smaevers.agent.model.json.CellType;
 import de.hsb.smaevers.agent.model.json.PerceptionObject;
 import jade.core.AID;
 import jade.core.Agent;
@@ -33,8 +41,13 @@ public class MyAgent extends Agent {
 	private IWorld world = new World();
 
 	private AID antworldAgent;
-	private AID updateTileTopic;
-	
+	private AID updateWorldTopic;
+
+	private PerceptionObject lastPerception;
+	private ActionObject lastAction;
+	private ActionType lastDirection;
+
+	private Random random = new Random();
 	private Gson gson = new Gson();
 
 	@Override
@@ -46,7 +59,7 @@ public class MyAgent extends Agent {
 
 		try {
 			TopicManagementHelper hlp = (TopicManagementHelper) getHelper(TopicManagementHelper.SERVICE_NAME);
-			updateTileTopic = hlp.createTopic(AntUiAgent.TILE_UPDATE);
+			updateWorldTopic = hlp.createTopic(AntUiAgent.TILE_UPDATE);
 
 			addBehaviour(new ReceiveMessageBehaviour());
 			addBehaviour(new LoginBehaviour());
@@ -57,10 +70,13 @@ public class MyAgent extends Agent {
 		}
 	}
 
-	private void sendTileUpdateMessage(PerceptionObject perception) {
-		ACLMessage msg = new ACLMessage(ACLMessage.CONFIRM);
-		msg.addReceiver(updateTileTopic);
-		msg.setContent(gson.toJson(perception));
+	private void updateWorld(CellObject cell) {
+		world.put(cell);
+		
+		ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+		msg.setLanguage("JSON");
+		msg.addReceiver(updateWorldTopic);
+		msg.setContent(gson.toJson(cell));
 		send(msg);
 	}
 
@@ -73,39 +89,106 @@ public class MyAgent extends Agent {
 			ACLMessage msg = receive();
 			if (msg != null) {
 				log.debug(msg.toString());
-				if (antworldAgent.equals(msg.getSender())){
+				if (antworldAgent.equals(msg.getSender())) {
 					try {
 						PerceptionObject perception = gson.fromJson(msg.getContent(), PerceptionObject.class);
-						if (perception != null){
-							world.put(perception.getCell());
-							sendTileUpdateMessage(perception);
-							
-							calcNextMove(msg.getReplyWith());
+						if (perception != null) {
+							updateWorld(perception.getCell());
+
+							doNextTurn(perception, msg.getReplyWith());
 						}
+
+						lastPerception = perception;
 					} catch (JsonSyntaxException e) {
 						log.error(e.getMessage(), e);
 					}
 				}
-				
+
+				try {
+					Thread.sleep(1000);
+				} catch (InterruptedException e) {
+				}
+
 			} else {
 				block();
 			}
+
 		}
 
 	}
-	
-	private void calcNextMove(String replyTo){
-		//TODO: nice logic
-		
+
+	private void doNextTurn(PerceptionObject perception, String replyTo) {
+		// TODO: nice logic
+
 		ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
 		msg.setLanguage("JSON");
 		msg.setInReplyTo(replyTo);
-		
-		ActionObject action = new ActionObject(AntWorldConsts.ANT_ACTION_DOWN, AntWorldConsts.ANT_COLOR_BLUE);
+
+		// move
+		ActionType direction = getNextDirectionForFoodSearch(perception);
+		ActionObject action = new ActionObject(direction, AntWorldConsts.ANT_COLOR_BLUE);
+
 		msg.setContent(gson.toJson(action));
 		msg.addReceiver(antworldAgent);
-		
+
 		send(msg);
+
+		lastDirection = direction;
+		lastAction = action;
+	}
+
+	private ActionType getNextDirectionForFoodSearch(PerceptionObject perception) {
+		List<ActionType> possibleDirections = new ArrayList<>(ActionType.directions);
+		int row = perception.getCell().getRow();
+		int col = perception.getCell().getCol();
+		
+		// found rock
+		if (!hasMoved(perception)) {
+			switch (lastDirection) {
+			case ANT_ACTION_UP:
+				--row;
+				break;
+			case ANT_ACTION_DOWN:
+				++row;
+				break;
+			case ANT_ACTION_LEFT:
+				--col;
+				break;
+			case ANT_ACTION_RIGHT:
+				++col;
+				break;
+
+			default:
+				break;
+			}
+			CellObject rock = new CellObject(col, row, CellType.OBSTACLE);
+			updateWorld(rock);
+		}
+		
+		//remove directions of known fields
+		if (world.get(col + 1, row) != null)
+			possibleDirections.remove(ActionType.ANT_ACTION_RIGHT);
+		if (world.get(col - 1, row) != null)
+			possibleDirections.remove(ActionType.ANT_ACTION_LEFT);
+		if (world.get(col, row + 1) != null)
+			possibleDirections.remove(ActionType.ANT_ACTION_DOWN);
+		if (world.get(col, row - 1) != null)
+			possibleDirections.remove(ActionType.ANT_ACTION_UP);
+		
+		if (!possibleDirections.isEmpty())
+			return possibleDirections.get(random.nextInt(possibleDirections.size()));
+		
+		//go back, this area is already explored
+		return ActionType.getReverseDirection(lastDirection);
+	}
+
+	private boolean hasMoved(PerceptionObject currentPerception) {
+		if (lastPerception != null && lastPerception.getCell() != null && currentPerception != null
+				&& currentPerception.getCell() != null) {
+			return lastPerception.getCell().getRow() != currentPerception.getCell().getRow()
+					|| lastPerception.getCell().getCol() != currentPerception.getCell().getCol();
+		}
+		return true;
 	}
 
 	class LoginBehaviour extends OneShotBehaviour {
@@ -132,7 +215,7 @@ public class MyAgent extends Agent {
 					message.setLanguage("JSON");
 
 					Gson gson = new Gson();
-					ActionObject loginbody = new ActionObject(AntWorldConsts.ANT_ACTION_LOGIN,
+					ActionObject loginbody = new ActionObject(ActionType.ANT_ACTION_LOGIN,
 							AntWorldConsts.ANT_COLOR_BLUE);
 					message.setContent(gson.toJson(loginbody));
 					myAgent.send(message);

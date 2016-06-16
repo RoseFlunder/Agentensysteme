@@ -16,21 +16,23 @@ public enum ActionType {
 			.unmodifiableList(Arrays.asList(ANT_ACTION_UP, ANT_ACTION_DOWN, ANT_ACTION_LEFT, ANT_ACTION_RIGHT));
 
 	public static ActionType getReverseDirection(ActionType direction){
-		switch (direction) {
-		case ANT_ACTION_UP:
-			return ANT_ACTION_DOWN;
-			
-		case ANT_ACTION_DOWN:
-			return ANT_ACTION_UP;
-			
-		case ANT_ACTION_LEFT:
-			return ANT_ACTION_RIGHT;
-			
-		case ANT_ACTION_RIGHT:
-			return ANT_ACTION_LEFT;
+		if (direction != null){
+			switch (direction) {
+			case ANT_ACTION_UP:
+				return ANT_ACTION_DOWN;
+				
+			case ANT_ACTION_DOWN:
+				return ANT_ACTION_UP;
+				
+			case ANT_ACTION_LEFT:
+				return ANT_ACTION_RIGHT;
+				
+			case ANT_ACTION_RIGHT:
+				return ANT_ACTION_LEFT;
 
-		default:
-			break;
+			default:
+				break;
+			}
 		}
 		
 		return null;

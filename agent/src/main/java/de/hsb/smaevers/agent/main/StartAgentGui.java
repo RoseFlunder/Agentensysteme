@@ -36,6 +36,7 @@ public class StartAgentGui {
 		Properties props = getProperties();
 		
 		String host = props.getProperty("host", "localhost");
+		LOG.debug("IP: {}", host);
 		int port = -1;
 		
 		try {
@@ -43,6 +44,7 @@ public class StartAgentGui {
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}
+		LOG.debug("Port: {}", port);
 		
 		Runtime runtime = Runtime.instance();
 		Profile profile = new ProfileImpl(host, port, null, false);

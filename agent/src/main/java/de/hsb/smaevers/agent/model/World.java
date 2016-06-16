@@ -13,11 +13,23 @@ public class World implements IWorld {
 	private Map<Integer, Map<Integer, CellObject>> data = new HashMap<>();
 
 	@Override
-	public void put(CellObject tile) {
-		if (!data.containsKey(tile.getCol()))
-			data.put(tile.getCol(), new HashMap<>());
+	public void put(CellObject newCell) {
+		int col = newCell.getCol();
+		int row = newCell.getRow();
 		
-		data.get(tile.getCol()).put(tile.getRow(), tile);
+		if (!data.containsKey(col))
+			data.put(col, new HashMap<>());
+		
+		if (!data.get(col).containsKey(row))
+			data.get(col).put(row, newCell);
+		else {
+			CellObject cell = data.get(col).get(row);
+			cell.setAnts(newCell.getAnts());
+			cell.setFood(newCell.getFood());
+			cell.setSmell(newCell.getSmell());
+			cell.setStench(newCell.getStench());
+			cell.setType(newCell.getType());
+		}
 	}
 
 	@Override
@@ -36,6 +48,25 @@ public class World implements IWorld {
 		}
 		
 		return allTiles;
+	}
+
+	@Override
+	public List<CellObject> getKnownSuccessors(CellObject cell) {
+		List<CellObject> successors = new ArrayList<>();
+		int row = cell.getRow();
+		int col = cell.getCol();
+		
+		if (get(col - 1, row) != null)
+			successors.add(get(col - 1, row));
+		if (get(col + 1, row) != null)
+			successors.add(get(col + 1, row));
+		if (get(col, row - 1) != null)
+			successors.add(get(col, row - 1));
+		if (get(col, row + 1) != null)
+			successors.add(get(col, row + 1));
+		
+		return successors;
+		
 	}
 
 }

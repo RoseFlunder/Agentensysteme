@@ -2,7 +2,9 @@ package de.hsb.smaevers.agent.agents;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -42,6 +44,10 @@ public class MyAgent extends Agent {
 
 	private AID antworldAgent;
 	private AID updateWorldTopic;
+	
+	private Set<CellObject> potentialFoodCells = new HashSet<>();
+	private Set<CellObject> potentialTrapsCells = new HashSet<>();
+	private Set<CellObject> unvisitedUndangerousCells = new HashSet<>();
 
 	private PerceptionObject lastPerception;
 	private ActionObject lastAction;
@@ -124,7 +130,21 @@ public class MyAgent extends Agent {
 		msg.setLanguage("JSON");
 		msg.setInReplyTo(replyTo);
 
+		List<CellObject> neighbours = getNeighbours(perception.getCell());
+		if (lastPerception != null)
+			neighbours.remove(lastPerception.getCell());
+		
 		// move
+		if (perception.getCell().getSmell() > 0){
+			potentialFoodCells.addAll(neighbours);
+		}
+		if (perception.getCell().getStench() > 0){
+			potentialTrapsCells.addAll(neighbours);
+		}
+		if (perception.getCell().getStench() == 0 && perception.getCell().getSmell() == 0){
+			unvisitedUndangerousCells.addAll(neighbours);
+		}
+		
 		ActionType direction = getNextDirectionForFoodSearch(perception);
 		ActionObject action = new ActionObject(direction, AntWorldConsts.ANT_COLOR_BLUE);
 
@@ -135,6 +155,44 @@ public class MyAgent extends Agent {
 
 		lastDirection = direction;
 		lastAction = action;
+	}
+	
+	private List<CellObject> getNeighbours(CellObject cell){
+		List<CellObject> list = new ArrayList<>();
+		int row = cell.getRow();
+		int col = cell.getCol();
+		
+		CellType type = CellType.UNKOWN;
+		if (cell.getStench() == 3)
+			type = CellType.PIT;
+		
+		CellObject leftCell = world.get(col - 1, row);
+		if (leftCell == null)
+			leftCell = createCellAndUpdateWorld(col - 1, row, type);
+		list.add(leftCell);
+		
+		CellObject rightCell = world.get(col + 1, row);
+		if (rightCell == null)
+			rightCell = createCellAndUpdateWorld(col + 1, row, type);
+		list.add(rightCell);
+		
+		CellObject topCell = world.get(col, row - 1);
+		if (topCell == null)
+			topCell = createCellAndUpdateWorld(col, row - 1, type);
+		list.add(topCell);
+		
+		CellObject botCell = world.get(col, row + 1);
+		if (botCell == null)
+			botCell = createCellAndUpdateWorld(col, row + 1, type);
+		list.add(botCell);
+		
+		return list;
+	}
+	
+	private CellObject createCellAndUpdateWorld(int col, int row, CellType type){
+		CellObject cell = new CellObject(col, row, type);
+		updateWorld(cell);
+		return cell;
 	}
 
 	private ActionType getNextDirectionForFoodSearch(PerceptionObject perception) {
@@ -166,14 +224,14 @@ public class MyAgent extends Agent {
 		}
 		
 		//remove directions of known fields
-		if (world.get(col + 1, row) != null)
-			possibleDirections.remove(ActionType.ANT_ACTION_RIGHT);
-		if (world.get(col - 1, row) != null)
-			possibleDirections.remove(ActionType.ANT_ACTION_LEFT);
-		if (world.get(col, row + 1) != null)
-			possibleDirections.remove(ActionType.ANT_ACTION_DOWN);
-		if (world.get(col, row - 1) != null)
-			possibleDirections.remove(ActionType.ANT_ACTION_UP);
+//		if (world.get(col + 1, row) != null)
+//			possibleDirections.remove(ActionType.ANT_ACTION_RIGHT);
+//		if (world.get(col - 1, row) != null)
+//			possibleDirections.remove(ActionType.ANT_ACTION_LEFT);
+//		if (world.get(col, row + 1) != null)
+//			possibleDirections.remove(ActionType.ANT_ACTION_DOWN);
+//		if (world.get(col, row - 1) != null)
+//			possibleDirections.remove(ActionType.ANT_ACTION_UP);
 		
 		if (!possibleDirections.isEmpty())
 			return possibleDirections.get(random.nextInt(possibleDirections.size()));

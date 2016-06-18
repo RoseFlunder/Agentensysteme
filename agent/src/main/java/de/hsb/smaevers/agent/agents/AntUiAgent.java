@@ -93,7 +93,7 @@ public class AntUiAgent extends jade.gui.GuiAgent {
 						antClientUi.updateCell(cell);
 					}
 				});
-				LOG.debug(msg.toString());
+				LOG.trace(msg.toString());
 			}
 			
 			MessageTemplate updatePositoin = MessageTemplate.MatchTopic(topicPosition);

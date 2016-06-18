@@ -11,7 +11,25 @@ public class CellObject {
 	private int smell;
 	private int stench;
 	private String[] ants;
+	private double pitChance;
+	private double foodChance;
 	
+	public double getPitChance() {
+		return pitChance;
+	}
+
+	public void setPitChance(double pitChance) {
+		this.pitChance = pitChance;
+	}
+
+	public double getFoodChance() {
+		return foodChance;
+	}
+
+	public void setFoodChance(double foodChance) {
+		this.foodChance = foodChance;
+	}
+
 	public CellObject(){
 		
 	}

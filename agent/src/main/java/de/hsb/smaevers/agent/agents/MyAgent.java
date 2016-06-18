@@ -1,7 +1,10 @@
 package de.hsb.smaevers.agent.agents;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
@@ -23,6 +26,9 @@ import de.hsb.smaevers.agent.model.json.ActionType;
 import de.hsb.smaevers.agent.model.json.CellObject;
 import de.hsb.smaevers.agent.model.json.CellType;
 import de.hsb.smaevers.agent.model.json.PerceptionObject;
+import de.hsb.smaevers.agent.util.AStarAlgo;
+import de.hsb.smaevers.agent.util.CellUtils;
+import de.hsb.smaevers.agent.util.DistanceComparatorToRefCell;
 import jade.core.AID;
 import jade.core.Agent;
 import jade.core.ServiceException;
@@ -44,13 +50,14 @@ public class MyAgent extends Agent {
 
 	private AID antworldAgent;
 	private AID updateWorldTopic;
-	
+	private AID updatePosition;
+
+	private Set<CellObject> foundFoodCells = new HashSet<>();
 	private Set<CellObject> potentialFoodCells = new HashSet<>();
 	private Set<CellObject> potentialTrapsCells = new HashSet<>();
 	private Set<CellObject> unvisitedUndangerousCells = new HashSet<>();
 
 	private PerceptionObject lastPerception;
-	private ActionObject lastAction;
 	private ActionType lastDirection;
 
 	private Random random = new Random();
@@ -66,6 +73,7 @@ public class MyAgent extends Agent {
 		try {
 			TopicManagementHelper hlp = (TopicManagementHelper) getHelper(TopicManagementHelper.SERVICE_NAME);
 			updateWorldTopic = hlp.createTopic(AntUiAgent.TILE_UPDATE);
+			updatePosition = hlp.createTopic(AntUiAgent.ANT_POSITION_UPDATE);
 
 			addBehaviour(new ReceiveMessageBehaviour());
 			addBehaviour(new LoginBehaviour());
@@ -78,7 +86,7 @@ public class MyAgent extends Agent {
 
 	private void updateWorld(CellObject cell) {
 		world.put(cell);
-		
+
 		ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
 		msg.setLanguage("JSON");
 		msg.addReceiver(updateWorldTopic);
@@ -94,13 +102,12 @@ public class MyAgent extends Agent {
 		public void action() {
 			ACLMessage msg = receive();
 			if (msg != null) {
-				log.debug(msg.toString());
+				log.trace(msg.toString());
 				if (antworldAgent.equals(msg.getSender())) {
 					try {
 						PerceptionObject perception = gson.fromJson(msg.getContent(), PerceptionObject.class);
 						if (perception != null) {
-							updateWorld(perception.getCell());
-
+							gainKnowledgeFromPerception(perception);
 							doNextTurn(perception, msg.getReplyWith());
 						}
 
@@ -123,83 +130,10 @@ public class MyAgent extends Agent {
 
 	}
 
-	private void doNextTurn(PerceptionObject perception, String replyTo) {
-		// TODO: nice logic
-
-		ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
-		msg.setLanguage("JSON");
-		msg.setInReplyTo(replyTo);
-
-		List<CellObject> neighbours = getNeighbours(perception.getCell());
-		if (lastPerception != null)
-			neighbours.remove(lastPerception.getCell());
-		
-		// move
-		if (perception.getCell().getSmell() > 0){
-			potentialFoodCells.addAll(neighbours);
-		}
-		if (perception.getCell().getStench() > 0){
-			potentialTrapsCells.addAll(neighbours);
-		}
-		if (perception.getCell().getStench() == 0 && perception.getCell().getSmell() == 0){
-			unvisitedUndangerousCells.addAll(neighbours);
-		}
-		
-		ActionType direction = getNextDirectionForFoodSearch(perception);
-		ActionObject action = new ActionObject(direction, AntWorldConsts.ANT_COLOR_BLUE);
-
-		msg.setContent(gson.toJson(action));
-		msg.addReceiver(antworldAgent);
-
-		send(msg);
-
-		lastDirection = direction;
-		lastAction = action;
-	}
-	
-	private List<CellObject> getNeighbours(CellObject cell){
-		List<CellObject> list = new ArrayList<>();
-		int row = cell.getRow();
-		int col = cell.getCol();
-		
-		CellType type = CellType.UNKOWN;
-		if (cell.getStench() == 3)
-			type = CellType.PIT;
-		
-		CellObject leftCell = world.get(col - 1, row);
-		if (leftCell == null)
-			leftCell = createCellAndUpdateWorld(col - 1, row, type);
-		list.add(leftCell);
-		
-		CellObject rightCell = world.get(col + 1, row);
-		if (rightCell == null)
-			rightCell = createCellAndUpdateWorld(col + 1, row, type);
-		list.add(rightCell);
-		
-		CellObject topCell = world.get(col, row - 1);
-		if (topCell == null)
-			topCell = createCellAndUpdateWorld(col, row - 1, type);
-		list.add(topCell);
-		
-		CellObject botCell = world.get(col, row + 1);
-		if (botCell == null)
-			botCell = createCellAndUpdateWorld(col, row + 1, type);
-		list.add(botCell);
-		
-		return list;
-	}
-	
-	private CellObject createCellAndUpdateWorld(int col, int row, CellType type){
-		CellObject cell = new CellObject(col, row, type);
-		updateWorld(cell);
-		return cell;
-	}
-
-	private ActionType getNextDirectionForFoodSearch(PerceptionObject perception) {
-		List<ActionType> possibleDirections = new ArrayList<>(ActionType.directions);
+	private void gainKnowledgeFromPerception(PerceptionObject perception) {
+		updateWorld(perception.getCell());
 		int row = perception.getCell().getRow();
 		int col = perception.getCell().getCol();
-		
 		// found rock
 		if (!hasMoved(perception)) {
 			switch (lastDirection) {
@@ -219,25 +153,174 @@ public class MyAgent extends Agent {
 			default:
 				break;
 			}
+			log.debug("Found rock at {}|{}", col, row);
 			CellObject rock = new CellObject(col, row, CellType.OBSTACLE);
+			potentialFoodCells.remove(rock);
+			unvisitedUndangerousCells.remove(rock);
+			potentialTrapsCells.remove(rock);
 			updateWorld(rock);
 		}
 		
-		//remove directions of known fields
-//		if (world.get(col + 1, row) != null)
-//			possibleDirections.remove(ActionType.ANT_ACTION_RIGHT);
-//		if (world.get(col - 1, row) != null)
-//			possibleDirections.remove(ActionType.ANT_ACTION_LEFT);
-//		if (world.get(col, row + 1) != null)
-//			possibleDirections.remove(ActionType.ANT_ACTION_DOWN);
-//		if (world.get(col, row - 1) != null)
-//			possibleDirections.remove(ActionType.ANT_ACTION_UP);
+		//TODO: pit & food chance
+		CellObject currentCell = perception.getCell();
+		double pitChance = currentCell.getStench();
 		
-		if (!possibleDirections.isEmpty())
-			return possibleDirections.get(random.nextInt(possibleDirections.size()));
+		CellObject leftCell = world.get(col - 1, row);
+		if (leftCell == null){
+			leftCell = new CellObject(col - 1, row, CellType.UNKOWN);
+			leftCell.setPitChance(pitChance);
+			updateWorld(leftCell);
+			//TODO: too restrictive
+			if (currentCell.getSmell() - currentCell.getFood() > 0 && currentCell.getStench() == 0){
+				potentialFoodCells.add(leftCell);
+			}
+			if (currentCell.getStench() > 0){
+				potentialTrapsCells.add(leftCell);
+			}
+			if (currentCell.getSmell() - currentCell.getFood() == 0 && currentCell.getStench() == 0){
+				unvisitedUndangerousCells.add(leftCell);
+			}
+		}
+
+		CellObject rightCell = world.get(col + 1, row);
+		if (rightCell == null){
+			rightCell = new CellObject(col + 1, row, CellType.UNKOWN);
+			rightCell.setPitChance(pitChance);
+			updateWorld(rightCell);
+			
+			//TODO: too restrictive
+			if (currentCell.getSmell() - currentCell.getFood() > 0 && currentCell.getStench() == 0){
+				potentialFoodCells.add(rightCell);
+			}
+			if (currentCell.getStench() > 0){
+				potentialTrapsCells.add(rightCell);
+			}
+			if (currentCell.getSmell() - currentCell.getFood() == 0 && currentCell.getStench() == 0){
+				unvisitedUndangerousCells.add(rightCell);
+			}
+		}
+
+		CellObject topCell = world.get(col, row - 1);
+		if (topCell == null){
+			topCell = new CellObject(col, row - 1, CellType.UNKOWN);
+			topCell.setPitChance(pitChance);
+			updateWorld(topCell);
+			
+			//TODO: too restrictive
+			if (currentCell.getSmell() - currentCell.getFood() > 0 && currentCell.getStench() == 0){
+				potentialFoodCells.add(topCell);
+			}
+			if (currentCell.getStench() > 0){
+				potentialTrapsCells.add(topCell);
+			}
+			if (currentCell.getSmell() - currentCell.getFood() == 0 && currentCell.getStench() == 0){
+				unvisitedUndangerousCells.add(topCell);
+			}
+		}
+
+		CellObject botCell = world.get(col, row + 1);
+		if (botCell == null){
+			botCell = new CellObject(col, row + 1, CellType.UNKOWN);
+			botCell.setPitChance(pitChance);
+			updateWorld(botCell);
+			
+			//TODO: too restrictive
+			if (currentCell.getSmell() - currentCell.getFood() > 0 && currentCell.getStench() == 0){
+				potentialFoodCells.add(botCell);
+			}
+			if (currentCell.getStench() > 0){
+				potentialTrapsCells.add(botCell);
+			}
+			if (currentCell.getSmell() - currentCell.getFood() == 0 && currentCell.getStench() == 0){
+				unvisitedUndangerousCells.add(botCell);
+			}
+		}
 		
-		//go back, this area is already explored
-		return ActionType.getReverseDirection(lastDirection);
+		if (currentCell.getFood() > 0){
+			foundFoodCells.add(currentCell);
+		} else {
+			foundFoodCells.remove(currentCell);
+		}
+		
+		potentialFoodCells.remove(currentCell);
+		unvisitedUndangerousCells.remove(currentCell);
+		potentialTrapsCells.remove(currentCell);
+	}
+
+	private void doNextTurn(PerceptionObject perception, String replyTo) {
+		// TODO: nice logic
+
+		ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
+		msg.setLanguage("JSON");
+		msg.setInReplyTo(replyTo);
+
+		ActionType direction = getNextDirectionForFoodSearch(perception);
+		log.debug("Next direction: {}", direction);
+		ActionObject action = new ActionObject(direction, AntWorldConsts.ANT_COLOR_BLUE);
+
+		msg.setContent(gson.toJson(action));
+		msg.addReceiver(antworldAgent);
+
+		send(msg);
+
+		lastDirection = direction;
+	}
+
+	private ActionType getNextDirectionForFoodSearch(PerceptionObject perception) {
+		CellObject currentCell = perception.getCell();
+
+		if (!potentialFoodCells.isEmpty()) {
+			log.debug("Search for path to a potential food cell");
+			return getDirectionToFirstCellFromShortestPath(currentCell, potentialFoodCells);			
+		}
+		
+		if (!unvisitedUndangerousCells.isEmpty()){
+			log.debug("Search for path to an undangerous cell");
+			return getDirectionToFirstCellFromShortestPath(currentCell, unvisitedUndangerousCells);	
+		}
+		
+		if (!potentialTrapsCells.isEmpty()){
+			log.debug("Search for path to a potential trap cell");
+			//TODO: cannot work yet because a star ignores potential trap cells
+			return getDirectionToFirstCellFromShortestPath(currentCell, potentialTrapsCells);
+		}
+		
+		return null;
+	}
+	
+	private ActionType getDirectionToFirstCellFromShortestPath(CellObject currentCell, Collection<CellObject> potentialCells){
+		List<CellObject> cells = new ArrayList<>(potentialCells);
+		Collections.sort(cells, new DistanceComparatorToRefCell(currentCell));
+
+		Iterator<CellObject> iterator = cells.iterator();
+
+		int shortestPathLength = 0;
+		List<CellObject> options = new ArrayList<>();
+		CellObject dest = null;
+		do {
+			dest = iterator.next();
+			log.debug("Search path from {} to {}", currentCell, dest);
+			
+			Queue<CellObject> path = AStarAlgo.getShortestPath(currentCell, dest, world);
+			if (shortestPathLength == 0 || path.size() < shortestPathLength) {
+				shortestPathLength = path.size();
+				options.clear();
+				options.add(path.peek());
+			} else if (path.size() == shortestPathLength)
+				options.add(path.peek());
+
+		} while (iterator.hasNext() && CellUtils.getHeuristicDistance(currentCell, dest) <= shortestPathLength);
+
+		log.debug("stopped search path finding and found {} path options", options.size());
+		return getDirection(currentCell, options.get(random.nextInt(options.size())));
+	}
+
+	private ActionType getDirection(CellObject from, CellObject to) {
+		log.debug("Get direction from {} to {}", from, to);
+		if (from.getCol() == to.getCol())
+			return from.getRow() < to.getRow() ? ActionType.ANT_ACTION_DOWN : ActionType.ANT_ACTION_UP;
+
+		return from.getCol() < to.getCol() ? ActionType.ANT_ACTION_RIGHT : ActionType.ANT_ACTION_LEFT;
 	}
 
 	private boolean hasMoved(PerceptionObject currentPerception) {

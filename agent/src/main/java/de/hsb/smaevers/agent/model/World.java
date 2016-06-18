@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import de.hsb.smaevers.agent.model.json.CellObject;
+import de.hsb.smaevers.agent.model.json.CellType;
 
 public class World implements IWorld {
 	
@@ -51,18 +52,18 @@ public class World implements IWorld {
 	}
 
 	@Override
-	public List<CellObject> getKnownSuccessors(CellObject cell) {
+	public List<CellObject> getSuccessorsWithoutObstacles(CellObject cell) {
 		List<CellObject> successors = new ArrayList<>();
 		int row = cell.getRow();
 		int col = cell.getCol();
 		
-		if (get(col - 1, row) != null)
+		if (get(col - 1, row) != null && get(col - 1, row).getType() != CellType.OBSTACLE)
 			successors.add(get(col - 1, row));
-		if (get(col + 1, row) != null)
+		if (get(col + 1, row) != null && get(col + 1, row).getType() != CellType.OBSTACLE)
 			successors.add(get(col + 1, row));
-		if (get(col, row - 1) != null)
+		if (get(col, row - 1) != null && get(col, row - 1).getType() != CellType.OBSTACLE)
 			successors.add(get(col, row - 1));
-		if (get(col, row + 1) != null)
+		if (get(col, row + 1) != null && get(col, row + 1).getType() != CellType.OBSTACLE)
 			successors.add(get(col, row + 1));
 		
 		return successors;

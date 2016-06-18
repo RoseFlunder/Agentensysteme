@@ -29,8 +29,8 @@ public class AStarAlgo {
 			closedList.add(currentNode);
 			
 			//expand node
-			for (CellObject cell : world.getKnownSuccessors(currentNode.getData())) {
-				if (cell.getType() != CellType.FREE && cell.getType() != CellType.START)
+			for (CellObject cell : world.getSuccessorsWithoutObstacles(currentNode.getData())) {
+				if (cell.getPitChance() > 0)
 					continue;
 				int hSuc = CellUtils.getHeuristicDistance(start, cell);
 				AStarNode<CellObject> suc = new AStarNode<CellObject>(cell, hSuc);
@@ -56,6 +56,7 @@ public class AStarAlgo {
 			currentNode = currentNode.getPredecessor();
 		} while (currentNode != null);
 		
+		path.removeFirst();
 		return path;
 	}
 

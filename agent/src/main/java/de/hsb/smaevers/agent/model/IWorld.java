@@ -10,7 +10,7 @@ public interface IWorld {
 
 	public CellObject get(Integer col, Integer row);
 	
-	public List<CellObject> getKnownSuccessors(CellObject cell);
+	public List<CellObject> getSuccessorsWithoutObstacles(CellObject cell);
 	
 	public Iterable<CellObject> getAllTiles();
 	

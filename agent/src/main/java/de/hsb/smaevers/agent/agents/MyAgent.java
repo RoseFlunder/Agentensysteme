@@ -93,6 +93,14 @@ public class MyAgent extends Agent {
 		msg.setContent(gson.toJson(cell));
 		send(msg);
 	}
+	
+	private void updateAntPosition(CellObject cell) {
+		ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+		msg.setLanguage("JSON");
+		msg.addReceiver(updatePosition);
+		msg.setContent(gson.toJson(cell));
+		send(msg);
+	}
 
 	class ReceiveMessageBehaviour extends CyclicBehaviour {
 
@@ -107,6 +115,7 @@ public class MyAgent extends Agent {
 					try {
 						PerceptionObject perception = gson.fromJson(msg.getContent(), PerceptionObject.class);
 						if (perception != null) {
+							updateAntPosition(perception.getCell());
 							gainKnowledgeFromPerception(perception);
 							doNextTurn(perception, msg.getReplyWith());
 						}

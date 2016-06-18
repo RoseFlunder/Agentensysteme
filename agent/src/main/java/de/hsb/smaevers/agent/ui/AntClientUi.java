@@ -5,6 +5,8 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.swing.JFrame;
 import javax.swing.JLayeredPane;
@@ -16,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import de.hsb.smaevers.agent.agents.AntUiAgent;
 import de.hsb.smaevers.agent.model.json.CellObject;
 import de.hsb.smaevers.agent.model.json.CellType;
+import jade.core.AID;
 import jade.gui.GuiEvent;
 
 public class AntClientUi {
@@ -23,6 +26,8 @@ public class AntClientUi {
 	
 	private final JFrame frame;
 	private final AntUiAgent agent;
+	
+	private Map<String, Ant> ants = new HashMap<>();
 
 	private WorldPanel worldPanel;
 	
@@ -70,6 +75,18 @@ public class AntClientUi {
 		worldPanel.putTile(cell);
 	}
 	
+	public void updateAntPosition(CellObject cell, AID ant){
+		if (!ants.containsKey(ant.getLocalName())){
+			Ant antComp = new Ant();
+			worldPanel.add(antComp, new Integer(1));
+			ants.put(ant.getLocalName(), antComp);
+		}
+		
+		Ant antComp = ants.get(ant.getLocalName());
+		antComp.setLocation(cell.getCol(), cell.getRow());
+		worldPanel.repaint();
+	}
+	
 	class WorldPanel extends JLayeredPane {
 
 		private static final long serialVersionUID = 1L;
@@ -99,7 +116,7 @@ public class AntClientUi {
 				
 			UITile uiTile = new UITile(cell);
 			uiTile.setLocation(xPos, yPos);
-			add(uiTile, 0);
+			add(uiTile, new Integer(0), 0);
 			
 			validate();
 			repaint();

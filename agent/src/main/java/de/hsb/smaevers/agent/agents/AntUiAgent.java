@@ -28,52 +28,50 @@ import jade.wrapper.StaleProxyException;
 public class AntUiAgent extends jade.gui.GuiAgent {
 
 	private static final long serialVersionUID = 1L;
-	
+
 	public static final String TILE_UPDATE = "TILE_UPDATE";
 	public static final String ANT_POSITION_UPDATE = "ANT_POSITION_UPDATE";
-	
+
 	public static final int EVENT_CLOSE = 0;
-	
-	
+
 	private final Logger LOG = LoggerFactory.getLogger(GuiAgent.class);
-	
+
 	private final Gson gson = new Gson();
 	private AntClientUi antClientUi;
 
 	private AID topicUpdate;
 	private AID topicPosition;
-	
+
 	@Override
 	protected void setup() {
 		super.setup();
-		
+
 		try {
 			TopicManagementHelper hlp = (TopicManagementHelper) getHelper(TopicManagementHelper.SERVICE_NAME);
-			
+
 			topicUpdate = hlp.createTopic(TILE_UPDATE);
 			hlp.register(topicUpdate);
-			
+
 			topicPosition = hlp.createTopic(ANT_POSITION_UPDATE);
 			hlp.register(topicPosition);
-			
-			addBehaviour(new ReceiveMessages(this));			
-			
+
+			addBehaviour(new ReceiveMessages(this));
+
 			SwingUtilities.invokeLater(new Runnable() {
 				@Override
 				public void run() {
 					LOG.debug("create agent UI");
-					antClientUi = new AntClientUi(AntUiAgent.this);				
+					antClientUi = new AntClientUi(AntUiAgent.this);
 				}
 			});
 		} catch (ServiceException e) {
 			LOG.error(e.getMessage(), e);
 		}
-		
-		
+
 	}
-	
+
 	class ReceiveMessages extends CyclicBehaviour {
-		
+
 		public ReceiveMessages(AntUiAgent agent) {
 			super(agent);
 		}
@@ -84,7 +82,7 @@ public class AntUiAgent extends jade.gui.GuiAgent {
 		public void action() {
 			MessageTemplate updateTemplate = MessageTemplate.MatchTopic(topicUpdate);
 			ACLMessage msg = receive(updateTemplate);
-			if (msg != null){
+			if (msg != null) {
 				LOG.debug("update message received");
 				CellObject cell = gson.fromJson(msg.getContent(), CellObject.class);
 				SwingUtilities.invokeLater(new Runnable() {
@@ -95,29 +93,35 @@ public class AntUiAgent extends jade.gui.GuiAgent {
 				});
 				LOG.trace(msg.toString());
 			}
-			
+
 			MessageTemplate updatePositoin = MessageTemplate.MatchTopic(topicPosition);
-			msg = receive(updatePositoin);
-			if (msg != null){
+			ACLMessage msgPosUpdate = receive(updatePositoin);
+			if (msgPosUpdate != null) {
 				LOG.debug("position update received");
-				
+				CellObject cell = gson.fromJson(msgPosUpdate.getContent(), CellObject.class);
+				SwingUtilities.invokeLater(new Runnable() {
+					@Override
+					public void run() {
+						antClientUi.updateAntPosition(cell, msgPosUpdate.getSender());
+					}
+				});
+				LOG.trace(msgPosUpdate.toString());
 			}
-			
+
 			if (msg == null)
 				block();
 		}
-		
-	}
 
+	}
 
 	@Override
 	protected void onGuiEvent(GuiEvent ev) {
 		switch (ev.getType()) {
 		case EVENT_CLOSE:
-			//send message to all ants to log off
+			// send message to all ants to log off
 			doDelete();
 			LOG.debug("Called GUI agent delete");
-			
+
 			try {
 				getContainerController().kill();
 			} catch (StaleProxyException e) {

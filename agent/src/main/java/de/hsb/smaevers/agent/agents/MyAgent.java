@@ -41,6 +41,7 @@ import jade.domain.FIPAException;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
+import jade.lang.acl.MessageTemplate;
 
 /**
  * Class for an ant agent which explores the map and collects food.
@@ -97,7 +98,7 @@ public class MyAgent extends Agent {
 	 * 
 	 * @param cell
 	 */
-	private void updateWorld(CellObject cell) {
+	private void updateWorldAndPropagteToOthers(CellObject cell) {
 		world.put(cell);
 
 		ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
@@ -126,6 +127,16 @@ public class MyAgent extends Agent {
 
 		@Override
 		public void action() {
+			// update message with cell info from other ants
+			MessageTemplate updateTemplate = MessageTemplate.MatchTopic(updateWorldTopic);
+			ACLMessage msgUpdate = receive(updateTemplate);
+			if (msgUpdate != null) {
+				log.trace("update message received");
+				CellObject cell = gson.fromJson(msgUpdate.getContent(), CellObject.class);
+				world.put(cell);
+			}
+
+			// other messages
 			ACLMessage msg = receive();
 			if (msg != null) {
 				log.trace(msg.toString());
@@ -172,7 +183,7 @@ public class MyAgent extends Agent {
 	 */
 	private void gainKnowledgeFromPerception(int performative, PerceptionObject perception) {
 		// updates the world with the information of the current cell
-		updateWorld(perception.getCell());
+		updateWorldAndPropagteToOthers(perception.getCell());
 		int row = perception.getCell().getRow();
 		int col = perception.getCell().getCol();
 
@@ -197,7 +208,7 @@ public class MyAgent extends Agent {
 			}
 			log.debug("Found rock at {}|{}", col, row);
 			CellObject rock = new CellObject(col, row, CellType.OBSTACLE);
-			updateWorld(rock);
+			updateWorldAndPropagteToOthers(rock);
 		}
 
 		// check all neighbour cells and create them if they are unknown
@@ -235,7 +246,7 @@ public class MyAgent extends Agent {
 			cell = new CellObject(col, row, CellType.UNKOWN);
 		}
 		updateCellWithNeighbourInfos(cell);
-		updateWorld(cell);
+		updateWorldAndPropagteToOthers(cell);
 	}
 
 	/**
@@ -403,7 +414,8 @@ public class MyAgent extends Agent {
 			// it unpossible to find a shorther path
 		} while (iterator.hasNext() && CellUtils.getHeuristicDistance(currentCell, dest) <= shortestPathLength);
 
-		log.debug("stopped path finding and found {} options which led to a shortest path to a preferred cell", options.size());
+		log.debug("stopped path finding and found {} options which led to a shortest path to a preferred cell",
+				options.size());
 		// choose an option and determine the direction to move to it
 		CellObject[] optionsArray = options.toArray(new CellObject[options.size()]);
 		return getDirection(currentCell, optionsArray[random.nextInt(optionsArray.length)]);

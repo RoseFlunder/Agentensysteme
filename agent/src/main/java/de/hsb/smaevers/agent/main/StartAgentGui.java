@@ -81,8 +81,17 @@ public class StartAgentGui {
 		AgentContainer container = runtime.createAgentContainer(profile);
 		
 		try {
-			AgentController agentController = container.createNewAgent("RoseFlunder" + UUID.randomUUID().toString(), MyAgent.class.getName(), agentArgs);
-			agentController.start();
+			int numberOfAnts = 1;
+			try {
+				numberOfAnts = Integer.parseInt(props.getProperty("number_ants", "1"));
+			} catch (NumberFormatException e) {
+				LOG.error("Cannot parse the number of ants from the properties file", e);
+			}
+			
+			for (int i = 0; i < numberOfAnts; ++i){
+				AgentController agentController = container.createNewAgent("RoseFlunder" + UUID.randomUUID().toString(), MyAgent.class.getName(), agentArgs);
+				agentController.start();
+			}
 			
 			if (Boolean.valueOf(props.getProperty("start_gui", "false"))){
 				AgentController guiAgentController = container.createNewAgent("Gui Agent", AntUiAgent.class.getName(), agentArgs);

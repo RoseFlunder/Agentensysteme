@@ -46,6 +46,10 @@ public class UITile extends JComponent {
 		setSize(WIDTH, HEIGHT);
 	}
 	
+	public void setCell(CellObject cell) {
+		this.cell = cell;
+	}
+	
 	@Override
 	protected void paintComponent(Graphics g) {
 		Graphics2D g2 = (Graphics2D) g;
@@ -93,20 +97,5 @@ public class UITile extends JComponent {
 		return new Dimension(WIDTH, HEIGHT);
 	}
 
-//	@Override
-//	public int hashCode() {
-//		return tile.hashCode();
-//	}
-//
-//	@Override
-//	public boolean equals(Object obj) {
-//		if (obj != null && obj instanceof UITile){
-//			UITile t = (UITile) obj;
-//			
-//			return Objects.equals(tile, t.tile);
-//		}
-//		
-//		return false;
-//	}
 	
 }

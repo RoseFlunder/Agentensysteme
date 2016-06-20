@@ -1,8 +1,8 @@
 package de.hsb.smaevers.agent.ui;
 
 import java.awt.BorderLayout;
-import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Point;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.HashMap;
@@ -17,7 +17,6 @@ import org.slf4j.LoggerFactory;
 
 import de.hsb.smaevers.agent.agents.AntUiAgent;
 import de.hsb.smaevers.agent.model.json.CellObject;
-import de.hsb.smaevers.agent.model.json.CellType;
 import jade.core.AID;
 import jade.gui.GuiEvent;
 
@@ -53,19 +52,6 @@ public class AntClientUi {
 		JScrollPane scrollPane = new JScrollPane(worldPanel = new WorldPanel());
 		frame.add(scrollPane, BorderLayout.CENTER);
 		
-		
-//		worldPanel.putTile(new CellObject(0, 0, CellType.OBSTACLE));
-//		worldPanel.putTile(new CellObject(1, 1, CellType.PIT));
-//		CellObject cell = new CellObject(2, 2, CellType.FREE);
-//		cell.setFood(2);
-//		worldPanel.putTile(cell);
-//		worldPanel.putTile(new CellObject(3, 3, CellType.START));
-//		worldPanel.putTile(new CellObject(4, 4, CellType.FREE));
-//		
-//		Ant ant = new Ant();
-//		ant.setLocation(2, 2);
-//		worldPanel.add(ant, 1);
-		
 		frame.setSize(800, 600);
 		frame.setLocationRelativeTo(null);
 		frame.setVisible(true);
@@ -91,6 +77,8 @@ public class AntClientUi {
 
 		private static final long serialVersionUID = 1L;
 		
+		private Map<Point, UITile> cells = new HashMap<>();
+		
 		private int maxX = 0;
 		private int maxY = 0;
 
@@ -109,14 +97,18 @@ public class AntClientUi {
 			
 			WorldPanel.this.setSize(maxX, maxY);
 			
-			Component comp = WorldPanel.this.getComponentAt(xPos, yPos);
-			if (comp != null && comp instanceof UITile){
-				remove(comp);
-			}
+			Point point = new Point(xPos, yPos);
+			UITile comp = cells.get(point);
+			
+			if (comp != null){
+				comp.setCell(cell);
+			} else {
+				UITile uiTile = new UITile(cell);
+				uiTile.setLocation(xPos, yPos);
+				add(uiTile, new Integer(0), 0);
 				
-			UITile uiTile = new UITile(cell);
-			uiTile.setLocation(xPos, yPos);
-			add(uiTile, new Integer(0), 0);
+				cells.put(new Point(xPos, yPos), uiTile);
+			}
 			
 			validate();
 			repaint();

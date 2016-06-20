@@ -133,10 +133,10 @@ public class MyAgent extends Agent {
 					}
 				}
 
-				try {
-					Thread.sleep(50);
-				} catch (InterruptedException e) {
-				}
+//				try {
+//					Thread.sleep(50);
+//				} catch (InterruptedException e) {
+//				}
 
 			} else {
 				block();

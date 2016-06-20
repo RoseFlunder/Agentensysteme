@@ -16,6 +16,13 @@ import jade.core.Runtime;
 import jade.wrapper.AgentContainer;
 import jade.wrapper.AgentController;
 
+/**
+ * Main Class to start the application.
+ * Configuration can be done via connection.properties file
+ * 
+ * @author Stephan
+ *
+ */
 public class StartAgentGui {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(StartAgentGui.class);
@@ -57,8 +64,15 @@ public class StartAgentGui {
 		}
 		LOG.debug("Port: {}", port);
 		
-		Object[] agentArgs = new Object[1];
+		Object[] agentArgs = new Object[3];
 		agentArgs[0] = getColor(props);
+		//topic cell update
+		agentArgs[1] = props.getProperty("topic_cell_update", "topic_cell_update");
+		//topic ant position update
+		agentArgs[2] = props.getProperty("topic_position_update", "topic_position_update");
+		
+		LOG.debug("Topic for cell update: {}", agentArgs[1]);
+		LOG.debug("Topic for position update: {}", agentArgs[2]);
 		
 		Runtime runtime = Runtime.instance();
 		Profile profile = new ProfileImpl(host, port, null, false);
@@ -70,8 +84,11 @@ public class StartAgentGui {
 			AgentController agentController = container.createNewAgent("RoseFlunder" + UUID.randomUUID().toString(), MyAgent.class.getName(), agentArgs);
 			agentController.start();
 			
-			AgentController guiAgentController = container.createNewAgent("Gui Agent", AntUiAgent.class.getName(), args);
-			guiAgentController.start();
+			if (Boolean.valueOf(props.getProperty("start_gui", "false"))){
+				AgentController guiAgentController = container.createNewAgent("Gui Agent", AntUiAgent.class.getName(), agentArgs);
+				guiAgentController.start();
+			}
+			
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}

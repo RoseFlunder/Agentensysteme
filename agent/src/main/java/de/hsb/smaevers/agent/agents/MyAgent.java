@@ -71,8 +71,8 @@ public class MyAgent extends Agent {
 
 		try {
 			TopicManagementHelper hlp = (TopicManagementHelper) getHelper(TopicManagementHelper.SERVICE_NAME);
-			updateWorldTopic = hlp.createTopic(AntUiAgent.TILE_UPDATE);
-			updatePosition = hlp.createTopic(AntUiAgent.ANT_POSITION_UPDATE);
+			updateWorldTopic = hlp.createTopic(getArguments()[1].toString());
+			updatePosition = hlp.createTopic(getArguments()[2].toString());
 
 			addBehaviour(new ReceiveMessageBehaviour());
 			addBehaviour(new LoginBehaviour());
@@ -132,12 +132,6 @@ public class MyAgent extends Agent {
 						log.error(e.getMessage(), e);
 					}
 				}
-
-//				try {
-//					Thread.sleep(50);
-//				} catch (InterruptedException e) {
-//				}
-
 			} else {
 				block();
 			}

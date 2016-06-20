@@ -28,9 +28,6 @@ public class AntUiAgent extends jade.gui.GuiAgent {
 
 	private static final long serialVersionUID = 1L;
 
-	public static final String TILE_UPDATE = "TILE_UPDATE";
-	public static final String ANT_POSITION_UPDATE = "ANT_POSITION_UPDATE";
-
 	public static final int EVENT_CLOSE = 0;
 
 	private final Logger LOG = LoggerFactory.getLogger(GuiAgent.class);
@@ -48,10 +45,10 @@ public class AntUiAgent extends jade.gui.GuiAgent {
 		try {
 			TopicManagementHelper hlp = (TopicManagementHelper) getHelper(TopicManagementHelper.SERVICE_NAME);
 
-			topicUpdate = hlp.createTopic(TILE_UPDATE);
+			topicUpdate = hlp.createTopic(getArguments()[1].toString());
 			hlp.register(topicUpdate);
 
-			topicPosition = hlp.createTopic(ANT_POSITION_UPDATE);
+			topicPosition = hlp.createTopic(getArguments()[2].toString());
 			hlp.register(topicPosition);
 
 			addBehaviour(new ReceiveMessages(this));

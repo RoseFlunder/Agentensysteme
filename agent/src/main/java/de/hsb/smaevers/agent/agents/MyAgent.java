@@ -3,10 +3,12 @@ package de.hsb.smaevers.agent.agents;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -40,6 +42,11 @@ import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
 
+/**
+ * Class for an ant agent which explores the map and collects food.
+ * 
+ * @author Stephan
+ */
 public class MyAgent extends Agent {
 
 	private static final long serialVersionUID = 1L;
@@ -50,7 +57,7 @@ public class MyAgent extends Agent {
 
 	private AID antworldAgent;
 	private AID updateWorldTopic;
-	private AID updatePosition;
+	private AID updatePositionTopic;
 
 	private PerceptionObject lastPerception;
 
@@ -63,26 +70,33 @@ public class MyAgent extends Agent {
 		super.setup();
 		log = LoggerFactory.getLogger(getLocalName());
 
-		log.debug("Test agent with name: {} starting", getLocalName());
-		
+		log.debug("Ant agent with name: {} starting", getLocalName());
+
 		Object arg0 = getArguments()[0];
 		if (arg0 != null && arg0 instanceof AntColor)
 			this.color = (AntColor) arg0;
 
 		try {
+			// create topics
 			TopicManagementHelper hlp = (TopicManagementHelper) getHelper(TopicManagementHelper.SERVICE_NAME);
 			updateWorldTopic = hlp.createTopic(getArguments()[1].toString());
-			updatePosition = hlp.createTopic(getArguments()[2].toString());
+			updatePositionTopic = hlp.createTopic(getArguments()[2].toString());
 
+			// add behaviours
 			addBehaviour(new ReceiveMessageBehaviour());
 			addBehaviour(new LoginBehaviour());
-
 		} catch (ServiceException e) {
 			log.error(e.getMessage(), e);
 			doDelete();
 		}
 	}
 
+	/**
+	 * Updates the local world map with the given cell and sends the cell to all
+	 * other agents
+	 * 
+	 * @param cell
+	 */
 	private void updateWorld(CellObject cell) {
 		world.put(cell);
 
@@ -92,11 +106,16 @@ public class MyAgent extends Agent {
 		msg.setContent(gson.toJson(cell));
 		send(msg);
 	}
-	
+
+	/**
+	 * Sends the current position of this ant to all other ants
+	 * 
+	 * @param cell
+	 */
 	private void updateAntPosition(CellObject cell) {
 		ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
 		msg.setLanguage("JSON");
-		msg.addReceiver(updatePosition);
+		msg.addReceiver(updatePositionTopic);
 		msg.setContent(gson.toJson(cell));
 		send(msg);
 	}
@@ -110,21 +129,27 @@ public class MyAgent extends Agent {
 			ACLMessage msg = receive();
 			if (msg != null) {
 				log.trace(msg.toString());
+				// receive messages from antworld
 				if (antworldAgent.equals(msg.getSender())) {
 					try {
 						PerceptionObject perception = gson.fromJson(msg.getContent(), PerceptionObject.class);
 						if (perception != null) {
-							if (perception.getState() == AntState.DEAD){
-								log.debug("Agent is dead and suspended");
-								MyAgent.this.doSuspend();
-							}
 							if (start == null && perception.getCell().getType() == CellType.START) {
 								start = perception.getCell();
 							}
-							
+
 							updateAntPosition(perception.getCell());
 							gainKnowledgeFromPerception(msg.getPerformative(), perception);
-							doNextTurn(perception, msg.getReplyWith());
+
+							// delete the agent when its dead
+							if (perception.getState() == AntState.DEAD) {
+								log.debug("Agent is dead and will be deleted");
+								MyAgent.this.doDelete();
+							}
+							// otherwise do the next turn
+							else {
+								doNextTurn(perception, msg.getReplyWith());
+							}
 						}
 
 						lastPerception = perception;
@@ -135,43 +160,23 @@ public class MyAgent extends Agent {
 			} else {
 				block();
 			}
-
-		}
-
-	}
-	
-	private void updateCellWithNeighbourInfos(CellObject cell){
-		if (cell.getType() == CellType.UNKOWN){
-			List<CellObject> neighbours = world.getAccessibleSuccessors(cell);
-			boolean potentialTrap = true;
-			boolean potentialFood = false;
-			for (CellObject n : neighbours) {
-				if (n.getType() != CellType.UNKOWN){
-					if (n.getStench() == 0)
-						potentialTrap = false;
-					if (n.getSmell() - n.getFood() > 0)
-						potentialFood = true;
-				}
-			}
-			cell.setPotentialFood(potentialFood);
-			cell.setPotentialTrap(potentialTrap);
 		}
 	}
-	
-	private void createNeighbourIfNotPresentAndUpdateWorld(int col, int row){
-		CellObject cell = world.get(col, row);
-		if (cell == null){
-			cell = new CellObject(col, row, CellType.UNKOWN);
-		}
-		updateCellWithNeighbourInfos(cell);
-		updateWorld(cell);
-	}
 
+	/**
+	 * Gets the current perception and uses its information to update the world
+	 * map.
+	 * 
+	 * @param performative
+	 * @param perception
+	 */
 	private void gainKnowledgeFromPerception(int performative, PerceptionObject perception) {
+		// updates the world with the information of the current cell
 		updateWorld(perception.getCell());
 		int row = perception.getCell().getRow();
 		int col = perception.getCell().getCol();
-		// found rock
+
+		// check for obstacle
 		if (performative == ACLMessage.REFUSE && !hasMoved(perception)) {
 			switch (perception.getAction()) {
 			case ANT_ACTION_UP:
@@ -194,111 +199,20 @@ public class MyAgent extends Agent {
 			CellObject rock = new CellObject(col, row, CellType.OBSTACLE);
 			updateWorld(rock);
 		}
-		
+
+		// check all neighbour cells and create them if they are unknown
 		createNeighbourIfNotPresentAndUpdateWorld(col - 1, row);
 		createNeighbourIfNotPresentAndUpdateWorld(col + 1, row);
 		createNeighbourIfNotPresentAndUpdateWorld(col, row - 1);
 		createNeighbourIfNotPresentAndUpdateWorld(col, row + 1);
 	}
 
-	private void doNextTurn(PerceptionObject perception, String replyTo) {
-		ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
-		msg.setLanguage("JSON");
-		msg.setInReplyTo(replyTo);
-		
-		ActionType action = null;
-		
-		if (perception.getCell().getFood() > 0 && perception.getCurrentFood() == 0){
-			log.debug("Found food, pick it up");
-			action = ActionType.ANT_ACTION_COLLECT;
-		} else if (perception.getCurrentFood() > 0 && perception.getCell().getType() == CellType.START){
-			log.debug("Droping food at start");
-			action = ActionType.ANT_ACTION_DROP;
-		} else {
-			action = getNextDirectionToMove(perception);
-			log.debug("Next direction: {}", action);
-			
-		}
-
-		msg.setContent(gson.toJson(new ActionObject(action, color)));
-		msg.addReceiver(antworldAgent);
-
-		send(msg);
-	}
-	
-	
-
-	private ActionType getNextDirectionToMove(PerceptionObject perception) {
-		CellObject currentCell = perception.getCell();
-		
-		if (perception.getCurrentFood() > 0){
-			log.debug("Search path to start");
-			Queue<CellObject> path = AStarAlgo.getShortestPath(currentCell, start, world, true);
-			return getDirection(currentCell, path.peek());
-		} else {
-			List<CellObject> options = world.getCellsWithFood();
-			if (!options.isEmpty()) {
-				log.debug("Search for path to a food cell");
-				return getDirectionToFirstCellFromShortestPath(currentCell, options, true);			
-			}
-			
-			options = world.getUnvisitedCells(c -> c.isPotentialFood() && !c.isPotentialTrap());
-			if (!options.isEmpty()) {
-				log.debug("Search for path to a potential food cell");
-				return getDirectionToFirstCellFromShortestPath(currentCell, options, true);			
-			}
-			
-			options = world.getUnvisitedCells(c -> !c.isPotentialTrap());
-			if (!options.isEmpty()){
-				log.debug("Search for path to an undangerous cell");
-				return getDirectionToFirstCellFromShortestPath(currentCell, options, true);	
-			}
-			
-			options = world.getUnvisitedCells(c -> true);
-			if (!options.isEmpty()){
-				log.debug("Search for path to a potential trap cell");
-				return getDirectionToFirstCellFromShortestPath(currentCell, options, false);
-			}
-		}
-		log.error("Ant is clueless where to move next");
-		return null;
-	}
-	
-	private ActionType getDirectionToFirstCellFromShortestPath(CellObject currentCell, Collection<CellObject> potentialCells, boolean avoidTraps){
-		List<CellObject> cells = new ArrayList<>(potentialCells);
-		Collections.sort(cells, new DistanceComparatorToRefCell(currentCell));
-
-		Iterator<CellObject> iterator = cells.iterator();
-
-		int shortestPathLength = 0;
-		List<CellObject> options = new ArrayList<>();
-		CellObject dest = null;
-		do {
-			dest = iterator.next();
-			log.debug("Search path from {} to {}", currentCell, dest);
-			
-			Queue<CellObject> path = AStarAlgo.getShortestPath(currentCell, dest, world, avoidTraps);
-			if (shortestPathLength == 0 || path.size() < shortestPathLength) {
-				shortestPathLength = path.size();
-				options.clear();
-				options.add(path.peek());
-			} else if (path.size() == shortestPathLength)
-				options.add(path.peek());
-
-		} while (iterator.hasNext() && CellUtils.getHeuristicDistance(currentCell, dest) <= shortestPathLength);
-
-		log.debug("stopped search path finding and found {} path options", options.size());
-		return getDirection(currentCell, options.get(random.nextInt(options.size())));
-	}
-
-	private ActionType getDirection(CellObject from, CellObject to) {
-		log.debug("Get direction from {} to {}", from, to);
-		if (from.getCol() == to.getCol())
-			return from.getRow() < to.getRow() ? ActionType.ANT_ACTION_DOWN : ActionType.ANT_ACTION_UP;
-
-		return from.getCol() < to.getCol() ? ActionType.ANT_ACTION_RIGHT : ActionType.ANT_ACTION_LEFT;
-	}
-
+	/**
+	 * Checks if the ant has moved since the last turn
+	 * 
+	 * @param currentPerception
+	 * @return
+	 */
 	private boolean hasMoved(PerceptionObject currentPerception) {
 		if (lastPerception != null && lastPerception.getCell() != null && currentPerception != null
 				&& currentPerception.getCell() != null) {
@@ -308,6 +222,212 @@ public class MyAgent extends Agent {
 		return true;
 	}
 
+	/**
+	 * Checks if a cell if the given coordinates exists and creates it if not
+	 * and updates the world map.
+	 * 
+	 * @param col
+	 * @param row
+	 */
+	private void createNeighbourIfNotPresentAndUpdateWorld(int col, int row) {
+		CellObject cell = world.get(col, row);
+		if (cell == null) {
+			cell = new CellObject(col, row, CellType.UNKOWN);
+		}
+		updateCellWithNeighbourInfos(cell);
+		updateWorld(cell);
+	}
+
+	/**
+	 * Gathers knowledge for a unknown cell from its known neighbours using
+	 * their stench and smell
+	 * 
+	 * @param cell
+	 */
+	private void updateCellWithNeighbourInfos(CellObject cell) {
+		if (cell.getType() == CellType.UNKOWN) {
+			List<CellObject> neighbours = world.getAccessibleSuccessors(cell);
+			boolean potentialTrap = true;
+			boolean potentialFood = false;
+			for (CellObject n : neighbours) {
+				if (n.getType() != CellType.UNKOWN) {
+					if (n.getStench() == 0)
+						potentialTrap = false;
+					if (n.getSmell() - n.getFood() > 0)
+						potentialFood = true;
+				}
+			}
+			cell.setPotentialFood(potentialFood);
+			cell.setPotentialTrap(potentialTrap);
+		}
+	}
+
+	/**
+	 * After knowledge is gained this method is called to determine what to do
+	 * next and sends the next turn to antworld.
+	 * 
+	 * @param perception
+	 * @param replyTo
+	 */
+	private void doNextTurn(PerceptionObject perception, String replyTo) {
+		ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
+		msg.setLanguage("JSON");
+		msg.setInReplyTo(replyTo);
+
+		ActionType action = null;
+
+		// if the current cell contains food and the ant is not carrying food
+		// yet, pick it up
+		if (perception.getCell().getFood() > 0 && perception.getCurrentFood() == 0) {
+			log.debug("Found food, pick it up");
+			action = ActionType.ANT_ACTION_COLLECT;
+		}
+		// if the ant is carrying food and has reached the start cell, drop it
+		else if (perception.getCurrentFood() > 0 && perception.getCell().getType() == CellType.START) {
+			log.debug("Droping food at start");
+			action = ActionType.ANT_ACTION_DROP;
+		}
+		// otherwise determine which cell should get visited next
+		else {
+			action = getNextDirectionToMove(perception);
+			log.debug("Next direction: {}", action);
+
+		}
+
+		msg.setContent(gson.toJson(new ActionObject(action, color)));
+		msg.addReceiver(antworldAgent);
+
+		send(msg);
+	}
+
+	/**
+	 * Determines the next direction for the current turn
+	 * 
+	 * @param perception
+	 * @return Action describing the direction
+	 */
+	private ActionType getNextDirectionToMove(PerceptionObject perception) {
+		CellObject currentCell = perception.getCell();
+
+		// if the ant is carriying food, the highest priority is to find the
+		// shortest path to the start
+		if (perception.getCurrentFood() > 0) {
+			log.debug("Search shortest path to start");
+			Queue<CellObject> path = AStarAlgo.getShortestPath(currentCell, start, world, true);
+			return getDirection(currentCell, path.peek());
+		}
+		// Otherwise search for food
+		else {
+			// 1. priority: check if the world map knows cell with food
+			List<CellObject> options = world.getCellsWithFood();
+			if (!options.isEmpty()) {
+				log.debug("Search for path to a food cell");
+				return getDirectionToFirstCellFromShortestPath(currentCell, options, true);
+			}
+
+			// 2. priority: check if the world map knows undangerous cell with a
+			// potential for food
+			options = world.getUnvisitedCells(c -> c.isPotentialFood() && !c.isPotentialTrap());
+			if (!options.isEmpty()) {
+				log.debug("Search for path to a potential food cell");
+				return getDirectionToFirstCellFromShortestPath(currentCell, options, true);
+			}
+
+			// 3. priority: check if the world mal knows undangerous cells to
+			// explore
+			options = world.getUnvisitedCells(c -> !c.isPotentialTrap());
+			if (!options.isEmpty()) {
+				log.debug("Search for path to an undangerous cell");
+				return getDirectionToFirstCellFromShortestPath(currentCell, options, true);
+			}
+
+			// 4. priority: try a dangerous cell
+			options = world.getUnvisitedCells(c -> true);
+			if (!options.isEmpty()) {
+				log.debug("Search for path to a potential trap cell");
+				return getDirectionToFirstCellFromShortestPath(currentCell, options, false);
+			}
+		}
+		log.error("Ant is clueless where to move next");
+		return null;
+	}
+
+	/**
+	 * 
+	 * 
+	 * @param currentCell
+	 *            current ant position
+	 * @param potentialCells
+	 *            possible destinations
+	 * @param avoidTraps
+	 *            flag if dangerous paths should be avoided
+	 * @return Action describing the direction for the next turn
+	 */
+	private ActionType getDirectionToFirstCellFromShortestPath(CellObject currentCell,
+			Collection<CellObject> potentialCells, boolean avoidTraps) {
+		List<CellObject> cells = new ArrayList<>(potentialCells);
+
+		// sort all possible destinations by manhatten distance to the current
+		// cell
+		Collections.sort(cells, new DistanceComparatorToRefCell(currentCell));
+
+		Iterator<CellObject> iterator = cells.iterator();
+		int shortestPathLength = 0;
+		Set<CellObject> options = new HashSet<>();
+		CellObject dest = null;
+
+		// iterate over all destinations
+		do {
+			dest = iterator.next();
+			log.debug("Search path from {} to {}", currentCell, dest);
+
+			// search the shortest path with A* to the destionation
+			Queue<CellObject> path = AStarAlgo.getShortestPath(currentCell, dest, world, avoidTraps);
+
+			// if there is a path and its length is shorter to previous shortest
+			// path. clear all previous options and this path is the new
+			// reference. Moreover add the first cell from this path as an
+			// option
+			// to visit
+			if (shortestPathLength == 0 || path.size() < shortestPathLength) {
+				shortestPathLength = path.size();
+				options.clear();
+				options.add(path.peek());
+			}
+			// if the path has the same length like the previous shortest path,
+			// take the first cell of the this path as an option too
+			else if (path.size() == shortestPathLength)
+				options.add(path.peek());
+
+			// try next possible destination until the manhatten distance makes
+			// it unpossible to find a shorther path
+		} while (iterator.hasNext() && CellUtils.getHeuristicDistance(currentCell, dest) <= shortestPathLength);
+
+		log.debug("stopped path finding and found {} options which led to a shortest path to a preferred cell", options.size());
+		// choose an option and determine the direction to move to it
+		CellObject[] optionsArray = options.toArray(new CellObject[options.size()]);
+		return getDirection(currentCell, optionsArray[random.nextInt(optionsArray.length)]);
+	}
+
+	/**
+	 * Gets a direction to move furter from the first, the second cell. Usually
+	 * this method should be only called for cells which connected directly.
+	 * 
+	 * @param from
+	 * @param to
+	 * @return
+	 */
+	private ActionType getDirection(CellObject from, CellObject to) {
+		log.debug("Get direction from {} to {}", from, to);
+		if (from.getCol() == to.getCol())
+			return from.getRow() < to.getRow() ? ActionType.ANT_ACTION_DOWN : ActionType.ANT_ACTION_UP;
+
+		return from.getCol() < to.getCol() ? ActionType.ANT_ACTION_RIGHT : ActionType.ANT_ACTION_LEFT;
+	}
+
+	/**
+	 * Behaviour which is responsible for logging in to antworld
+	 */
 	class LoginBehaviour extends OneShotBehaviour {
 		private static final long serialVersionUID = 1L;
 
@@ -332,8 +452,7 @@ public class MyAgent extends Agent {
 					message.setLanguage("JSON");
 
 					Gson gson = new Gson();
-					ActionObject loginbody = new ActionObject(ActionType.ANT_ACTION_LOGIN,
-							color);
+					ActionObject loginbody = new ActionObject(ActionType.ANT_ACTION_LOGIN, color);
 					message.setContent(gson.toJson(loginbody));
 					myAgent.send(message);
 				}

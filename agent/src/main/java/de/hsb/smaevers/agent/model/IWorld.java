@@ -18,4 +18,6 @@ public interface IWorld {
 	
 	public List<CellObject> getUnvisitedCells(Predicate<CellObject> p);
 	
+	public List<CellObject> getCellsWithFood();
+	
 }

@@ -20,6 +20,8 @@ import de.hsb.smaevers.agent.model.IWorld;
 import de.hsb.smaevers.agent.model.World;
 import de.hsb.smaevers.agent.model.json.ActionObject;
 import de.hsb.smaevers.agent.model.json.ActionType;
+import de.hsb.smaevers.agent.model.json.AntColor;
+import de.hsb.smaevers.agent.model.json.AntState;
 import de.hsb.smaevers.agent.model.json.CellObject;
 import de.hsb.smaevers.agent.model.json.CellType;
 import de.hsb.smaevers.agent.model.json.PerceptionObject;
@@ -44,6 +46,7 @@ public class MyAgent extends Agent {
 
 	private Logger log;
 	private IWorld world = new World();
+	private CellObject start;
 
 	private AID antworldAgent;
 	private AID updateWorldTopic;
@@ -53,6 +56,7 @@ public class MyAgent extends Agent {
 
 	private Random random = new Random();
 	private Gson gson = new Gson();
+	private AntColor color;
 
 	@Override
 	protected void setup() {
@@ -60,6 +64,10 @@ public class MyAgent extends Agent {
 		log = LoggerFactory.getLogger(getLocalName());
 
 		log.debug("Test agent with name: {} starting", getLocalName());
+		
+		Object arg0 = getArguments()[0];
+		if (arg0 != null && arg0 instanceof AntColor)
+			this.color = (AntColor) arg0;
 
 		try {
 			TopicManagementHelper hlp = (TopicManagementHelper) getHelper(TopicManagementHelper.SERVICE_NAME);
@@ -106,8 +114,16 @@ public class MyAgent extends Agent {
 					try {
 						PerceptionObject perception = gson.fromJson(msg.getContent(), PerceptionObject.class);
 						if (perception != null) {
+							if (perception.getState() == AntState.DEAD){
+								log.debug("Agent is dead and suspended");
+								MyAgent.this.doSuspend();
+							}
+							if (start == null && perception.getCell().getType() == CellType.START) {
+								start = perception.getCell();
+							}
+							
 							updateAntPosition(perception.getCell());
-							gainKnowledgeFromPerception(perception);
+							gainKnowledgeFromPerception(msg.getPerformative(), perception);
 							doNextTurn(perception, msg.getReplyWith());
 						}
 
@@ -118,7 +134,7 @@ public class MyAgent extends Agent {
 				}
 
 				try {
-					Thread.sleep(1000);
+					Thread.sleep(50);
 				} catch (InterruptedException e) {
 				}
 
@@ -157,12 +173,12 @@ public class MyAgent extends Agent {
 		updateWorld(cell);
 	}
 
-	private void gainKnowledgeFromPerception(PerceptionObject perception) {
+	private void gainKnowledgeFromPerception(int performative, PerceptionObject perception) {
 		updateWorld(perception.getCell());
 		int row = perception.getCell().getRow();
 		int col = perception.getCell().getCol();
 		// found rock
-		if (!hasMoved(perception)) {
+		if (performative == ACLMessage.REFUSE && !hasMoved(perception)) {
 			switch (perception.getAction()) {
 			case ANT_ACTION_UP:
 				--row;
@@ -195,38 +211,62 @@ public class MyAgent extends Agent {
 		ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
 		msg.setLanguage("JSON");
 		msg.setInReplyTo(replyTo);
+		
+		ActionType action = null;
+		
+		if (perception.getCell().getFood() > 0 && perception.getCurrentFood() == 0){
+			log.debug("Found food, pick it up");
+			action = ActionType.ANT_ACTION_COLLECT;
+		} else if (perception.getCurrentFood() > 0 && perception.getCell().getType() == CellType.START){
+			log.debug("Droping food at start");
+			action = ActionType.ANT_ACTION_DROP;
+		} else {
+			action = getNextDirectionToMove(perception);
+			log.debug("Next direction: {}", action);
+			
+		}
 
-		ActionType direction = getNextDirectionForFoodSearch(perception);
-		log.debug("Next direction: {}", direction);
-		ActionObject action = new ActionObject(direction, AntWorldConsts.ANT_COLOR_BLUE);
-
-		msg.setContent(gson.toJson(action));
+		msg.setContent(gson.toJson(new ActionObject(action, color)));
 		msg.addReceiver(antworldAgent);
 
 		send(msg);
 	}
+	
+	
 
-	private ActionType getNextDirectionForFoodSearch(PerceptionObject perception) {
+	private ActionType getNextDirectionToMove(PerceptionObject perception) {
 		CellObject currentCell = perception.getCell();
-
-		List<CellObject> options = world.getUnvisitedCells(c -> c.isPotentialFood() && !c.isPotentialTrap());
-		if (!options.isEmpty()) {
-			log.debug("Search for path to a potential food cell");
-			return getDirectionToFirstCellFromShortestPath(currentCell, options, true);			
-		}
 		
-		options = world.getUnvisitedCells(c -> !c.isPotentialTrap());
-		if (!options.isEmpty()){
-			log.debug("Search for path to an undangerous cell");
-			return getDirectionToFirstCellFromShortestPath(currentCell, options, true);	
+		if (perception.getCurrentFood() > 0){
+			log.debug("Search path to start");
+			Queue<CellObject> path = AStarAlgo.getShortestPath(currentCell, start, world, true);
+			return getDirection(currentCell, path.peek());
+		} else {
+			List<CellObject> options = world.getCellsWithFood();
+			if (!options.isEmpty()) {
+				log.debug("Search for path to a food cell");
+				return getDirectionToFirstCellFromShortestPath(currentCell, options, true);			
+			}
+			
+			options = world.getUnvisitedCells(c -> c.isPotentialFood() && !c.isPotentialTrap());
+			if (!options.isEmpty()) {
+				log.debug("Search for path to a potential food cell");
+				return getDirectionToFirstCellFromShortestPath(currentCell, options, true);			
+			}
+			
+			options = world.getUnvisitedCells(c -> !c.isPotentialTrap());
+			if (!options.isEmpty()){
+				log.debug("Search for path to an undangerous cell");
+				return getDirectionToFirstCellFromShortestPath(currentCell, options, true);	
+			}
+			
+			options = world.getUnvisitedCells(c -> true);
+			if (!options.isEmpty()){
+				log.debug("Search for path to a potential trap cell");
+				return getDirectionToFirstCellFromShortestPath(currentCell, options, false);
+			}
 		}
-		
-		options = world.getUnvisitedCells(c -> true);
-		if (!options.isEmpty()){
-			log.debug("Search for path to a potential trap cell");
-			return getDirectionToFirstCellFromShortestPath(currentCell, options, false);
-		}
-		
+		log.error("Ant is clueless where to move next");
 		return null;
 	}
 	
@@ -299,7 +339,7 @@ public class MyAgent extends Agent {
 
 					Gson gson = new Gson();
 					ActionObject loginbody = new ActionObject(ActionType.ANT_ACTION_LOGIN,
-							AntWorldConsts.ANT_COLOR_BLUE);
+							color);
 					message.setContent(gson.toJson(loginbody));
 					myAgent.send(message);
 				}

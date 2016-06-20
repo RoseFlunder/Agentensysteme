@@ -3,9 +3,9 @@ package de.hsb.smaevers.agent.model.json;
 public class ActionObject {
 	
 	private final ActionType type;
-	private final String color;
+	private final AntColor color;
 	
-	public ActionObject(ActionType type, String color) {
+	public ActionObject(ActionType type, AntColor color) {
 		this.type = type;
 		this.color = color;
 	}
@@ -14,7 +14,7 @@ public class ActionObject {
 		return type;
 	}
 
-	public String getColor() {
+	public AntColor getColor() {
 		return color;
 	}
 }

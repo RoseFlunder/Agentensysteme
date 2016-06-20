@@ -3,7 +3,7 @@ package de.hsb.smaevers.agent.model.json;
 public class PerceptionObject {
 	
 	private String name;
-	private String state;
+	private AntState state;
 	private String color;
 	private int currentFood;
 	private int totalFood;
@@ -17,10 +17,10 @@ public class PerceptionObject {
 	public void setName(String name) {
 		this.name = name;
 	}
-	public String getState() {
+	public AntState getState() {
 		return state;
 	}
-	public void setState(String state) {
+	public void setState(AntState state) {
 		this.state = state;
 	}
 	public String getColor() {

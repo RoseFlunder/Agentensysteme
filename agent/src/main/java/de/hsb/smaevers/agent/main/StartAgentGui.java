@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import de.hsb.smaevers.agent.agents.AntUiAgent;
 import de.hsb.smaevers.agent.agents.MyAgent;
+import de.hsb.smaevers.agent.model.json.AntColor;
 import jade.core.Profile;
 import jade.core.ProfileImpl;
 import jade.core.Runtime;
@@ -29,6 +30,16 @@ public class StartAgentGui {
 		
 		return props;
 	}
+	
+	private static AntColor getColor(Properties props){
+		String colorProp = props.getProperty("color");
+		try {
+			return AntColor.valueOf(colorProp);
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+			return AntColor.ANT_COLOR_BLUE;
+		}
+	}
 
 	public static void main(String[] args){
 		LOG.debug("Application starting..");
@@ -46,6 +57,9 @@ public class StartAgentGui {
 		}
 		LOG.debug("Port: {}", port);
 		
+		Object[] agentArgs = new Object[1];
+		agentArgs[0] = getColor(props);
+		
 		Runtime runtime = Runtime.instance();
 		Profile profile = new ProfileImpl(host, port, null, false);
 		profile.setParameter(Profile.SERVICES, "jade.core.messaging.TopicManagementService");
@@ -53,7 +67,7 @@ public class StartAgentGui {
 		AgentContainer container = runtime.createAgentContainer(profile);
 		
 		try {
-			AgentController agentController = container.createNewAgent("RoseFlunder" + UUID.randomUUID().toString(), MyAgent.class.getName(), args);
+			AgentController agentController = container.createNewAgent("RoseFlunder" + UUID.randomUUID().toString(), MyAgent.class.getName(), agentArgs);
 			agentController.start();
 			
 			AgentController guiAgentController = container.createNewAgent("Gui Agent", AntUiAgent.class.getName(), args);

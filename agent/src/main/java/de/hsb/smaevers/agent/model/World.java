@@ -25,16 +25,6 @@ public class World implements IWorld {
 			data.put(col, new HashMap<>());
 
 		data.get(col).put(row, newCell);
-//		if (!data.get(col).containsKey(row))
-//			data.get(col).put(row, newCell);
-//		else {
-//			CellObject cell = data.get(col).get(row);
-//			cell.setAnts(newCell.getAnts());
-//			cell.setFood(newCell.getFood());
-//			cell.setSmell(newCell.getSmell());
-//			cell.setStench(newCell.getStench());
-//			cell.setType(newCell.getType());
-//		}
 	}
 
 	@Override
@@ -78,6 +68,11 @@ public class World implements IWorld {
 	public List<CellObject> getUnvisitedCells(Predicate<CellObject> p) {
 		return getAllCells().parallelStream().filter(c -> c.getType() == CellType.UNKOWN && p.test(c))
 				.collect(Collectors.toList());
+	}
+
+	@Override
+	public List<CellObject> getCellsWithFood() {
+		return getAllCells().parallelStream().filter(c -> c.getFood() > 0).collect(Collectors.toList());
 	}
 
 }

@@ -56,6 +56,9 @@ public class MyAgent extends Agent {
 	private IWorld world = new World();
 	private CellObject start;
 
+	private MessageTemplate updateTemplate;
+	private MessageTemplate otherMessages;
+
 	private AID antworldAgent;
 	private AID updateWorldTopic;
 	private AID updatePositionTopic;
@@ -83,7 +86,11 @@ public class MyAgent extends Agent {
 			updateWorldTopic = hlp.createTopic(getArguments()[1].toString());
 			updatePositionTopic = hlp.createTopic(getArguments()[2].toString());
 
+			updateTemplate = MessageTemplate.MatchTopic(updateWorldTopic);
+			otherMessages = MessageTemplate.not(updateTemplate);
+
 			// add behaviours
+			addBehaviour(new ReceiveUpdateMessageBehaviour());
 			addBehaviour(new ReceiveMessageBehaviour());
 			addBehaviour(new LoginBehaviour());
 		} catch (ServiceException e) {
@@ -121,23 +128,36 @@ public class MyAgent extends Agent {
 		send(msg);
 	}
 
+	class ReceiveUpdateMessageBehaviour extends CyclicBehaviour {
+		private static final long serialVersionUID = 1L;
+
+		@Override
+		public void action() {
+			ACLMessage msgUpdate = receive(updateTemplate);
+			if (msgUpdate != null) {
+				log.trace("update message received");
+				CellObject cell = gson.fromJson(msgUpdate.getContent(), CellObject.class);
+
+				// check if update is useful
+				CellObject stored = world.get(cell.getCol(), cell.getRow());
+				if (stored == null || (stored.getType() == CellType.UNKOWN && cell.getType() != CellType.UNKOWN)
+						|| cell.getFood() < stored.getFood())
+					world.put(cell);
+
+			} else {
+				block();
+			}
+		}
+	}
+
 	class ReceiveMessageBehaviour extends CyclicBehaviour {
 
 		private static final long serialVersionUID = 1L;
 
 		@Override
 		public void action() {
-			// update message with cell info from other ants
-			MessageTemplate updateTemplate = MessageTemplate.MatchTopic(updateWorldTopic);
-			ACLMessage msgUpdate = receive(updateTemplate);
-			if (msgUpdate != null) {
-				log.trace("update message received");
-				CellObject cell = gson.fromJson(msgUpdate.getContent(), CellObject.class);
-				world.put(cell);
-			}
-
 			// other messages
-			ACLMessage msg = receive();
+			ACLMessage msg = receive(otherMessages);
 			if (msg != null) {
 				log.trace(msg.toString());
 				// receive messages from antworld

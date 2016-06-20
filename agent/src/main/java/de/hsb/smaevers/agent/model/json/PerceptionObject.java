@@ -7,7 +7,7 @@ public class PerceptionObject {
 	private String color;
 	private int currentFood;
 	private int totalFood;
-	private String action;
+	private ActionType action;
 	private CellObject cell;
 	private String replyId;
 	
@@ -41,10 +41,10 @@ public class PerceptionObject {
 	public void setTotalFood(int totalFood) {
 		this.totalFood = totalFood;
 	}
-	public String getAction() {
+	public ActionType getAction() {
 		return action;
 	}
-	public void setAction(String action) {
+	public void setAction(ActionType action) {
 		this.action = action;
 	}
 	public CellObject getCell() {

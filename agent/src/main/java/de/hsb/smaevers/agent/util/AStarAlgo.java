@@ -9,11 +9,10 @@ import java.util.Set;
 
 import de.hsb.smaevers.agent.model.IWorld;
 import de.hsb.smaevers.agent.model.json.CellObject;
-import de.hsb.smaevers.agent.model.json.CellType;
 
 public class AStarAlgo {
 	
-	public static Queue<CellObject> getShortestPath(CellObject start, CellObject dest, IWorld world){
+	public static Queue<CellObject> getShortestPath(CellObject start, CellObject dest, IWorld world, boolean avoidTraps){
 		Deque<CellObject> path = new LinkedList<>();
 		Set<AStarNode<CellObject>> closedList = new HashSet<>();
 		Queue<AStarNode<CellObject>> openList = new PriorityQueue<>();
@@ -29,8 +28,8 @@ public class AStarAlgo {
 			closedList.add(currentNode);
 			
 			//expand node
-			for (CellObject cell : world.getSuccessorsWithoutObstacles(currentNode.getData())) {
-				if (cell.getPitChance() > 0)
+			for (CellObject cell : world.getAccessibleSuccessors(currentNode.getData())) {
+				if (cell.isPotentialTrap() && avoidTraps)
 					continue;
 				int hSuc = CellUtils.getHeuristicDistance(start, cell);
 				AStarNode<CellObject> suc = new AStarNode<CellObject>(cell, hSuc);

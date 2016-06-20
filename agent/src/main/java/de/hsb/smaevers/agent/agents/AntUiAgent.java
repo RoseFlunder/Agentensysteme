@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import com.google.gson.Gson;
 
 import de.hsb.smaevers.agent.model.json.CellObject;
-import de.hsb.smaevers.agent.model.json.PerceptionObject;
 import de.hsb.smaevers.agent.ui.AntClientUi;
 import jade.core.AID;
 import jade.core.ServiceException;

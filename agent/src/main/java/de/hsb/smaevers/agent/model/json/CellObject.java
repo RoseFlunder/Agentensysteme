@@ -11,23 +11,23 @@ public class CellObject {
 	private int smell;
 	private int stench;
 	private String[] ants;
-	private double pitChance;
-	private double foodChance;
-	
-	public double getPitChance() {
-		return pitChance;
+	private boolean potentialTrap = false;
+	private boolean potentialFood = false;
+
+	public boolean isPotentialTrap() {
+		return potentialTrap;
 	}
 
-	public void setPitChance(double pitChance) {
-		this.pitChance = pitChance;
+	public void setPotentialTrap(boolean potentialTrap) {
+		this.potentialTrap = potentialTrap;
 	}
 
-	public double getFoodChance() {
-		return foodChance;
+	public boolean isPotentialFood() {
+		return potentialFood;
 	}
 
-	public void setFoodChance(double foodChance) {
-		this.foodChance = foodChance;
+	public void setPotentialFood(boolean potentialFood) {
+		this.potentialFood = potentialFood;
 	}
 
 	public CellObject(){

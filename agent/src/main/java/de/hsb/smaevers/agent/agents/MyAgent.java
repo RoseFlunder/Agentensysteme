@@ -3,13 +3,10 @@ package de.hsb.smaevers.agent.agents;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.Random;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -52,13 +49,7 @@ public class MyAgent extends Agent {
 	private AID updateWorldTopic;
 	private AID updatePosition;
 
-	private Set<CellObject> foundFoodCells = new HashSet<>();
-	private Set<CellObject> potentialFoodCells = new HashSet<>();
-	private Set<CellObject> potentialTrapsCells = new HashSet<>();
-	private Set<CellObject> unvisitedUndangerousCells = new HashSet<>();
-
 	private PerceptionObject lastPerception;
-	private ActionType lastDirection;
 
 	private Random random = new Random();
 	private Gson gson = new Gson();
@@ -138,6 +129,33 @@ public class MyAgent extends Agent {
 		}
 
 	}
+	
+	private void updateCellWithNeighbourInfos(CellObject cell){
+		if (cell.getType() == CellType.UNKOWN){
+			List<CellObject> neighbours = world.getAccessibleSuccessors(cell);
+			boolean potentialTrap = true;
+			boolean potentialFood = false;
+			for (CellObject n : neighbours) {
+				if (n.getType() != CellType.UNKOWN){
+					if (n.getStench() == 0)
+						potentialTrap = false;
+					if (n.getSmell() - n.getFood() > 0)
+						potentialFood = true;
+				}
+			}
+			cell.setPotentialFood(potentialFood);
+			cell.setPotentialTrap(potentialTrap);
+		}
+	}
+	
+	private void createNeighbourIfNotPresentAndUpdateWorld(int col, int row){
+		CellObject cell = world.get(col, row);
+		if (cell == null){
+			cell = new CellObject(col, row, CellType.UNKOWN);
+		}
+		updateCellWithNeighbourInfos(cell);
+		updateWorld(cell);
+	}
 
 	private void gainKnowledgeFromPerception(PerceptionObject perception) {
 		updateWorld(perception.getCell());
@@ -145,7 +163,7 @@ public class MyAgent extends Agent {
 		int col = perception.getCell().getCol();
 		// found rock
 		if (!hasMoved(perception)) {
-			switch (lastDirection) {
+			switch (perception.getAction()) {
 			case ANT_ACTION_UP:
 				--row;
 				break;
@@ -164,101 +182,16 @@ public class MyAgent extends Agent {
 			}
 			log.debug("Found rock at {}|{}", col, row);
 			CellObject rock = new CellObject(col, row, CellType.OBSTACLE);
-			potentialFoodCells.remove(rock);
-			unvisitedUndangerousCells.remove(rock);
-			potentialTrapsCells.remove(rock);
 			updateWorld(rock);
 		}
 		
-		//TODO: pit & food chance
-		CellObject currentCell = perception.getCell();
-		double pitChance = currentCell.getStench();
-		
-		CellObject leftCell = world.get(col - 1, row);
-		if (leftCell == null){
-			leftCell = new CellObject(col - 1, row, CellType.UNKOWN);
-			leftCell.setPitChance(pitChance);
-			updateWorld(leftCell);
-			//TODO: too restrictive
-			if (currentCell.getSmell() - currentCell.getFood() > 0 && currentCell.getStench() == 0){
-				potentialFoodCells.add(leftCell);
-			}
-			if (currentCell.getStench() > 0){
-				potentialTrapsCells.add(leftCell);
-			}
-			if (currentCell.getSmell() - currentCell.getFood() == 0 && currentCell.getStench() == 0){
-				unvisitedUndangerousCells.add(leftCell);
-			}
-		}
-
-		CellObject rightCell = world.get(col + 1, row);
-		if (rightCell == null){
-			rightCell = new CellObject(col + 1, row, CellType.UNKOWN);
-			rightCell.setPitChance(pitChance);
-			updateWorld(rightCell);
-			
-			//TODO: too restrictive
-			if (currentCell.getSmell() - currentCell.getFood() > 0 && currentCell.getStench() == 0){
-				potentialFoodCells.add(rightCell);
-			}
-			if (currentCell.getStench() > 0){
-				potentialTrapsCells.add(rightCell);
-			}
-			if (currentCell.getSmell() - currentCell.getFood() == 0 && currentCell.getStench() == 0){
-				unvisitedUndangerousCells.add(rightCell);
-			}
-		}
-
-		CellObject topCell = world.get(col, row - 1);
-		if (topCell == null){
-			topCell = new CellObject(col, row - 1, CellType.UNKOWN);
-			topCell.setPitChance(pitChance);
-			updateWorld(topCell);
-			
-			//TODO: too restrictive
-			if (currentCell.getSmell() - currentCell.getFood() > 0 && currentCell.getStench() == 0){
-				potentialFoodCells.add(topCell);
-			}
-			if (currentCell.getStench() > 0){
-				potentialTrapsCells.add(topCell);
-			}
-			if (currentCell.getSmell() - currentCell.getFood() == 0 && currentCell.getStench() == 0){
-				unvisitedUndangerousCells.add(topCell);
-			}
-		}
-
-		CellObject botCell = world.get(col, row + 1);
-		if (botCell == null){
-			botCell = new CellObject(col, row + 1, CellType.UNKOWN);
-			botCell.setPitChance(pitChance);
-			updateWorld(botCell);
-			
-			//TODO: too restrictive
-			if (currentCell.getSmell() - currentCell.getFood() > 0 && currentCell.getStench() == 0){
-				potentialFoodCells.add(botCell);
-			}
-			if (currentCell.getStench() > 0){
-				potentialTrapsCells.add(botCell);
-			}
-			if (currentCell.getSmell() - currentCell.getFood() == 0 && currentCell.getStench() == 0){
-				unvisitedUndangerousCells.add(botCell);
-			}
-		}
-		
-		if (currentCell.getFood() > 0){
-			foundFoodCells.add(currentCell);
-		} else {
-			foundFoodCells.remove(currentCell);
-		}
-		
-		potentialFoodCells.remove(currentCell);
-		unvisitedUndangerousCells.remove(currentCell);
-		potentialTrapsCells.remove(currentCell);
+		createNeighbourIfNotPresentAndUpdateWorld(col - 1, row);
+		createNeighbourIfNotPresentAndUpdateWorld(col + 1, row);
+		createNeighbourIfNotPresentAndUpdateWorld(col, row - 1);
+		createNeighbourIfNotPresentAndUpdateWorld(col, row + 1);
 	}
 
 	private void doNextTurn(PerceptionObject perception, String replyTo) {
-		// TODO: nice logic
-
 		ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
 		msg.setLanguage("JSON");
 		msg.setInReplyTo(replyTo);
@@ -271,33 +204,33 @@ public class MyAgent extends Agent {
 		msg.addReceiver(antworldAgent);
 
 		send(msg);
-
-		lastDirection = direction;
 	}
 
 	private ActionType getNextDirectionForFoodSearch(PerceptionObject perception) {
 		CellObject currentCell = perception.getCell();
 
-		if (!potentialFoodCells.isEmpty()) {
+		List<CellObject> options = world.getUnvisitedCells(c -> c.isPotentialFood() && !c.isPotentialTrap());
+		if (!options.isEmpty()) {
 			log.debug("Search for path to a potential food cell");
-			return getDirectionToFirstCellFromShortestPath(currentCell, potentialFoodCells);			
+			return getDirectionToFirstCellFromShortestPath(currentCell, options, true);			
 		}
 		
-		if (!unvisitedUndangerousCells.isEmpty()){
+		options = world.getUnvisitedCells(c -> !c.isPotentialTrap());
+		if (!options.isEmpty()){
 			log.debug("Search for path to an undangerous cell");
-			return getDirectionToFirstCellFromShortestPath(currentCell, unvisitedUndangerousCells);	
+			return getDirectionToFirstCellFromShortestPath(currentCell, options, true);	
 		}
 		
-		if (!potentialTrapsCells.isEmpty()){
+		options = world.getUnvisitedCells(c -> true);
+		if (!options.isEmpty()){
 			log.debug("Search for path to a potential trap cell");
-			//TODO: cannot work yet because a star ignores potential trap cells
-			return getDirectionToFirstCellFromShortestPath(currentCell, potentialTrapsCells);
+			return getDirectionToFirstCellFromShortestPath(currentCell, options, false);
 		}
 		
 		return null;
 	}
 	
-	private ActionType getDirectionToFirstCellFromShortestPath(CellObject currentCell, Collection<CellObject> potentialCells){
+	private ActionType getDirectionToFirstCellFromShortestPath(CellObject currentCell, Collection<CellObject> potentialCells, boolean avoidTraps){
 		List<CellObject> cells = new ArrayList<>(potentialCells);
 		Collections.sort(cells, new DistanceComparatorToRefCell(currentCell));
 
@@ -310,7 +243,7 @@ public class MyAgent extends Agent {
 			dest = iterator.next();
 			log.debug("Search path from {} to {}", currentCell, dest);
 			
-			Queue<CellObject> path = AStarAlgo.getShortestPath(currentCell, dest, world);
+			Queue<CellObject> path = AStarAlgo.getShortestPath(currentCell, dest, world, avoidTraps);
 			if (shortestPathLength == 0 || path.size() < shortestPathLength) {
 				shortestPathLength = path.size();
 				options.clear();

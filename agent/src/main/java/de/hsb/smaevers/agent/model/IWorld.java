@@ -1,17 +1,21 @@
 package de.hsb.smaevers.agent.model;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.function.Predicate;
 
 import de.hsb.smaevers.agent.model.json.CellObject;
 
 public interface IWorld {
 	
-	public void put(CellObject tile);
+	public void put(CellObject cell);
 
 	public CellObject get(Integer col, Integer row);
 	
-	public List<CellObject> getSuccessorsWithoutObstacles(CellObject cell);
+	public List<CellObject> getAccessibleSuccessors(CellObject cell);
 	
-	public Iterable<CellObject> getAllTiles();
+	public Collection<CellObject> getAllCells();
+	
+	public List<CellObject> getUnvisitedCells(Predicate<CellObject> p);
 	
 }

@@ -25,7 +25,7 @@ public class TestAStarAlgo {
 		world.put(new CellObject(1, 2, CellType.OBSTACLE));
 		world.put(new CellObject(2, 2, CellType.FREE));
 		
-		Queue<CellObject> shortestPath = AStarAlgo.getShortestPath(world.get(0, 2), world.get(2, 2), world);
+		Queue<CellObject> shortestPath = AStarAlgo.getShortestPath(world.get(0, 2), world.get(2, 2), world, true);
 		
 		for (CellObject cellObject : shortestPath) {
 			System.out.println(cellObject);

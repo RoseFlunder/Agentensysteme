@@ -63,6 +63,24 @@ public class World implements IWorld {
 		return successors;
 
 	}
+	
+	@Override
+	public List<CellObject> getAllSuccessors(CellObject cell) {
+		List<CellObject> successors = new ArrayList<>();
+		int row = cell.getRow();
+		int col = cell.getCol();
+
+		if (get(col - 1, row) != null)
+			successors.add(get(col - 1, row));
+		if (get(col + 1, row) != null)
+			successors.add(get(col + 1, row));
+		if (get(col, row - 1) != null)
+			successors.add(get(col, row - 1));
+		if (get(col, row + 1) != null)
+			successors.add(get(col, row + 1));
+
+		return successors;
+	}
 
 	@Override
 	public List<CellObject> getUnvisitedCells(Predicate<CellObject> p) {

@@ -51,7 +51,8 @@ public class AntUiAgent extends jade.gui.GuiAgent {
 			topicPosition = hlp.createTopic(getArguments()[2].toString());
 			hlp.register(topicPosition);
 
-			addBehaviour(new ReceiveMessages(this));
+			addBehaviour(new ReceivePosititionMessages(this));
+			addBehaviour(new ReceiveCellMessages(this));
 
 			SwingUtilities.invokeLater(new Runnable() {
 				@Override
@@ -65,10 +66,9 @@ public class AntUiAgent extends jade.gui.GuiAgent {
 		}
 
 	}
-
-	class ReceiveMessages extends CyclicBehaviour {
-
-		public ReceiveMessages(AntUiAgent agent) {
+	
+	class ReceiveCellMessages extends CyclicBehaviour {
+		public ReceiveCellMessages(AntUiAgent agent) {
 			super(agent);
 		}
 
@@ -88,8 +88,22 @@ public class AntUiAgent extends jade.gui.GuiAgent {
 					}
 				});
 				LOG.trace(msg.toString());
+			} else {
+				block();
 			}
+		}
+	}
 
+	class ReceivePosititionMessages extends CyclicBehaviour {
+
+		public ReceivePosititionMessages(AntUiAgent agent) {
+			super(agent);
+		}
+
+		private static final long serialVersionUID = 1L;
+
+		@Override
+		public void action() {
 			MessageTemplate updatePositoin = MessageTemplate.MatchTopic(topicPosition);
 			ACLMessage msgPosUpdate = receive(updatePositoin);
 			if (msgPosUpdate != null) {
@@ -102,10 +116,9 @@ public class AntUiAgent extends jade.gui.GuiAgent {
 					}
 				});
 				LOG.trace(msgPosUpdate.toString());
-			}
-
-			if (msg == null)
+			} else {
 				block();
+			}
 		}
 
 	}

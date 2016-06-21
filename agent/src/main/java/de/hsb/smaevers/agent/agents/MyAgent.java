@@ -85,6 +85,7 @@ public class MyAgent extends Agent {
 			TopicManagementHelper hlp = (TopicManagementHelper) getHelper(TopicManagementHelper.SERVICE_NAME);
 			updateWorldTopic = hlp.createTopic(getArguments()[1].toString());
 			updatePositionTopic = hlp.createTopic(getArguments()[2].toString());
+			hlp.register(updateWorldTopic);
 
 			updateTemplate = MessageTemplate.MatchTopic(updateWorldTopic);
 			otherMessages = MessageTemplate.not(updateTemplate);
@@ -290,6 +291,8 @@ public class MyAgent extends Agent {
 			}
 			cell.setPotentialFood(potentialFood);
 			cell.setPotentialTrap(potentialTrap);
+			
+			//TODO: Trap detection
 		}
 	}
 

@@ -402,7 +402,7 @@ public class MyAgent extends Agent {
 				return getDirectionToFirstCellFromShortestPath(currentCell, options, true);
 			}
 
-			// 4. priority: try a dangerous cell
+			// 4. priority: try an unknown dangerous cell
 			options = world.getUnvisitedCells(c -> true);
 			if (!options.isEmpty()) {
 				log.debug("Search for path to a potential trap cell");
@@ -410,7 +410,7 @@ public class MyAgent extends Agent {
 			}
 		}
 		log.error("Ant is clueless where to move next");
-		return null;
+		return ActionType.ANT_ACTION_VOID;
 	}
 
 	/**

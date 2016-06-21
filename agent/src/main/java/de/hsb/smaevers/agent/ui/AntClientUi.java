@@ -25,15 +25,12 @@ public class AntClientUi {
 	private final Logger LOG = LoggerFactory.getLogger(getClass());
 	
 	private final JFrame frame;
-	private final AntUiAgent agent;
 	
 	private Map<String, Ant> ants = new HashMap<>();
 
 	private WorldPanel worldPanel;
 	
-	public AntClientUi(final AntUiAgent agent){
-		this.agent = agent;
-		
+	public AntClientUi(final AntUiAgent agent){		
 		LOG.debug("Constructor of UI called");
 		
 		frame = new JFrame("Antworld Client UI");
@@ -71,7 +68,7 @@ public class AntClientUi {
 		
 		Ant antComp = ants.get(ant.getLocalName());
 		antComp.setLocation(cell.getCol(), cell.getRow());
-		worldPanel.repaint();
+		antComp.repaint();
 	}
 	
 	class WorldPanel extends JLayeredPane {
@@ -114,9 +111,6 @@ public class AntClientUi {
 				
 				cells.put(new Point(xPos, yPos), uiTile);
 			}
-			
-			validate();
-			repaint();
 		}
 
 		@Override

@@ -1,6 +1,5 @@
 package de.hsb.smaevers.agent.model;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -15,8 +14,6 @@ public interface IWorld {
 	public List<CellObject> getAccessibleSuccessors(CellObject cell);
 	
 	public List<CellObject> getAllSuccessors(CellObject cell);
-	
-	public Collection<CellObject> getAllCells();
 	
 	public List<CellObject> getUnvisitedCells(Predicate<CellObject> p);
 	

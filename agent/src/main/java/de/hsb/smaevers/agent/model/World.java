@@ -1,7 +1,6 @@
 package de.hsb.smaevers.agent.model;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -34,15 +33,14 @@ public class World implements IWorld {
 		return null;
 	}
 
-	@Override
-	public Collection<CellObject> getAllCells() {
-		List<CellObject> allTiles = new ArrayList<>();
+	private List<CellObject> getAllCells(Predicate<CellObject> p) {
+		List<CellObject> all = new ArrayList<>();
 		for (Iterator<Map<Integer, CellObject>> iterator = data.values().iterator(); iterator.hasNext();) {
 			Map<Integer, CellObject> map = iterator.next();
-			allTiles.addAll(map.values());
+			all.addAll(map.values().parallelStream().filter(p).collect(Collectors.toList()));
 		}
 
-		return allTiles;
+		return all;
 	}
 
 	@Override
@@ -84,13 +82,12 @@ public class World implements IWorld {
 
 	@Override
 	public List<CellObject> getUnvisitedCells(Predicate<CellObject> p) {
-		return getAllCells().parallelStream().filter(c -> c.getType() == CellType.UNKOWN && p.test(c))
-				.collect(Collectors.toList());
+		return getAllCells(c -> p.test(c) && c.getType() == CellType.UNKOWN);
 	}
 
 	@Override
 	public List<CellObject> getCellsWithFood() {
-		return getAllCells().parallelStream().filter(c -> c.getFood() > 0).collect(Collectors.toList());
+		return getAllCells(c -> c.getFood() > 0);
 	}
 
 }

@@ -135,7 +135,7 @@ public class MyAgent extends Agent {
 		@Override
 		public void action() {
 			ACLMessage msgUpdate = receive(updateTemplate);
-			if (msgUpdate != null) {
+			if (msgUpdate != null && !msgUpdate.getSender().equals(getAID())) {
 				log.trace("update message received");
 				CellObject cell = gson.fromJson(msgUpdate.getContent(), CellObject.class);
 
@@ -283,8 +283,10 @@ public class MyAgent extends Agent {
 			boolean potentialFood = false;
 			for (CellObject n : neighbours) {
 				if (n.getType() != CellType.UNKOWN) {
+					//this eleminates a chance that this cell could be trap
 					if (n.getStench() == 0)
 						potentialTrap = false;
+					//here could be food
 					if (n.getSmell() - n.getFood() > 0)
 						potentialFood = true;
 				}
@@ -292,7 +294,32 @@ public class MyAgent extends Agent {
 			cell.setPotentialFood(potentialFood);
 			cell.setPotentialTrap(potentialTrap);
 			
-			//TODO: Trap detection
+			//TODO: i could investigate for food also..
+			if (cell.isPotentialTrap()){
+				//Trap detection
+				neighbours = world.getAllSuccessors(cell);
+				//iterate over all neighbours of unknown cell
+				for (CellObject n : neighbours) {
+					//if its neighbour we already visited
+					if (n.getType() == CellType.FREE){
+						//we know that there must be 4 - stench undangerous cells around it
+						int nFree = 4 - n.getStench();
+						//so check its other neighbours
+						for (CellObject n2 : world.getAllSuccessors(n)) {
+							//if they are free, decrease the left over number of free cells
+							if (!n2.equals(cell) && !n2.isPotentialTrap() && n2.getType() != CellType.PIT){
+								--nFree;
+							}
+						}
+						//if all free cells are already known, our cell must be a trap
+						if (nFree == 0){
+							cell.setType(CellType.PIT);
+							break;
+						}
+					}
+					
+				}
+			}
 		}
 	}
 

@@ -108,6 +108,7 @@ public class AntClientUi {
 				if (stored == null || (stored.getType() == CellType.UNKOWN && cell.getType() != CellType.UNKOWN)
 						|| cell.getFood() < stored.getFood())
 					comp.setCell(cell);
+				comp.repaint();
 			} else {
 				UITile uiTile = new UITile(cell);
 				uiTile.setLocation(xPos, yPos);

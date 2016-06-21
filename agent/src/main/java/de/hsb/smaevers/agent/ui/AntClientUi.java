@@ -71,6 +71,10 @@ public class AntClientUi {
 		antComp.repaint();
 	}
 	
+	/**
+	 * Panel where all cells and ants are added
+	 * @author Stephan
+	 */
 	class WorldPanel extends JLayeredPane {
 
 		private static final long serialVersionUID = 1L;

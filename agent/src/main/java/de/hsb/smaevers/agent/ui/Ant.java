@@ -9,6 +9,10 @@ import java.io.IOException;
 import javax.imageio.ImageIO;
 import javax.swing.JComponent;
 
+/**
+ * Represents an ant in the UI
+ * @author Stephan
+ */
 public class Ant extends JComponent {
 
 	private static final long serialVersionUID = 1L;

@@ -1,10 +1,22 @@
 package de.hsb.smaevers.agent.util;
 
+/**
+ * Node class for nodes in the a star algo.
+ * @author Stephan
+ *
+ * @param <T> typed stored in a node
+ */
 public class AStarNode <T> implements Comparable<AStarNode<T>>{
 	
 	private T data = null;
 	private AStarNode<T> predecessor = null;
+	/**
+	 * The distance from the start to reach this node
+	 */
 	private int g = 0;
+	/**
+	 * Estimated distance from this node to the destination
+	 */
 	private int h = 0;
 	
 	public AStarNode(T data, int h){

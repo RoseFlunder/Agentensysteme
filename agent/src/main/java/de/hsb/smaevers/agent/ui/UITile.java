@@ -12,6 +12,10 @@ import javax.swing.JComponent;
 
 import de.hsb.smaevers.agent.model.json.CellObject;
 
+/**
+ * Represents a single cell in the UI
+ * @author Stephan
+ */
 public class UITile extends JComponent {
 
 	private static final long serialVersionUID = 1L;

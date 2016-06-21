@@ -50,6 +50,10 @@ public class UITile extends JComponent {
 		this.cell = cell;
 	}
 	
+	public CellObject getCell(){
+		return cell;
+	}
+	
 	@Override
 	protected void paintComponent(Graphics g) {
 		Graphics2D g2 = (Graphics2D) g;

@@ -77,8 +77,8 @@ public class AntUiAgent extends jade.gui.GuiAgent {
 		@Override
 		public void action() {
 			MessageTemplate updateTemplate = MessageTemplate.MatchTopic(topicUpdate);
-			ACLMessage msg = receive(updateTemplate);
-			if (msg != null) {
+			ACLMessage msg = null;
+			while ((msg = receive(updateTemplate)) != null) {
 				LOG.trace("update message received");
 				CellObject cell = gson.fromJson(msg.getContent(), CellObject.class);
 				SwingUtilities.invokeLater(new Runnable() {
@@ -88,9 +88,8 @@ public class AntUiAgent extends jade.gui.GuiAgent {
 					}
 				});
 				LOG.trace(msg.toString());
-			} else {
-				block();
 			}
+			block();
 		}
 	}
 

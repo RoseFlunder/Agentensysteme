@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import de.hsb.smaevers.agent.agents.AntUiAgent;
 import de.hsb.smaevers.agent.model.json.CellObject;
+import de.hsb.smaevers.agent.model.json.CellType;
 import jade.core.AID;
 import jade.gui.GuiEvent;
 
@@ -101,7 +102,11 @@ public class AntClientUi {
 			UITile comp = cells.get(point);
 			
 			if (comp != null){
-				comp.setCell(cell);
+				CellObject stored = comp.getCell();
+				//check if update is useful
+				if (stored == null || (stored.getType() == CellType.UNKOWN && cell.getType() != CellType.UNKOWN)
+						|| cell.getFood() < stored.getFood())
+					comp.setCell(cell);
 			} else {
 				UITile uiTile = new UITile(cell);
 				uiTile.setLocation(xPos, yPos);

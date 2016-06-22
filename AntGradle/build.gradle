@@ -1,0 +1,41 @@
+apply plugin: 'java'
+
+sourceCompatibility = 1.8
+version = '1.0'
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    // The production code uses the logback logging API at runtime
+    compile 'com.google.code.gson:gson:2.7'
+    compile 'ch.qos.logback:logback-classic:1.1.7'
+    compile files('extLib/antworld.jar', 'extLib/jade-4.4.0.jar')
+
+    testCompile 'junit:junit:4.12'
+}
+
+task copyToLib( type: Copy ) {
+    into "$buildDir/libs/lib"
+    from configurations.compile
+}
+
+task copyConfig( type: Copy) {
+	into "$buildDir/libs/config"
+	from "config"
+}
+
+jar {
+	dependsOn ('copyToLib', 'copyConfig')
+	
+    manifest {
+    	def manifestCp = configurations.compile.collect { 'lib/' + it.getName() }.join(' ')
+    	manifestCp += " config/"
+    
+        attributes("Implementation-Title": "RoseFlunder Agent",
+                   "Implementation-Version": version,
+                   "Main-Class": "de.hsb.smaevers.agent.main.StartAgentGui",
+                   "Class-Path": manifestCp)
+    }
+}

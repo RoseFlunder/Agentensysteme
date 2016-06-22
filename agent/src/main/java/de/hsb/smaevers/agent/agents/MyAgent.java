@@ -352,7 +352,8 @@ public class MyAgent extends Agent {
 		else {
 			action = getNextDirectionToMove(perception);
 			log.debug("Next direction: {}", action);
-
+			if (ActionType.ANT_ACTION_VOID == action)
+				doSuspend();
 		}
 
 		msg.setContent(gson.toJson(new ActionObject(action, color)));

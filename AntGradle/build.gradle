@@ -1,6 +1,8 @@
 apply plugin: 'java'
 
 sourceCompatibility = 1.8
+targetCompatibility = 1.8
+archivesBaseName = 'RoseFlunderAgent'
 version = '1.0'
 
 repositories {
@@ -8,7 +10,6 @@ repositories {
 }
 
 dependencies {
-    // The production code uses the logback logging API at runtime
     compile 'com.google.code.gson:gson:2.7'
     compile 'ch.qos.logback:logback-classic:1.1.7'
     compile files('extLib/antworld.jar', 'extLib/jade-4.4.0.jar')
@@ -38,4 +39,8 @@ jar {
                    "Main-Class": "de.hsb.smaevers.agent.main.StartAgentGui",
                    "Class-Path": manifestCp)
     }
+}
+
+javadoc {
+	options.memberLevel = JavadocMemberLevel.PRIVATE
 }

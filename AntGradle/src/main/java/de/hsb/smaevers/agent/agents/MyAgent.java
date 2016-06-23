@@ -17,7 +17,6 @@ import org.slf4j.LoggerFactory;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 
-import de.aim.antworld.agent.AntWorldConsts;
 import de.hsb.smaevers.agent.model.IWorld;
 import de.hsb.smaevers.agent.model.World;
 import de.hsb.smaevers.agent.model.json.ActionObject;
@@ -492,12 +491,13 @@ public class MyAgent extends Agent {
 	 * Behaviour which is responsible for logging in to antworld
 	 */
 	class LoginBehaviour extends OneShotBehaviour {
+		private static final String ANTWORLD_SERVICE_NAME = "antworld2016";
 		private static final long serialVersionUID = 1L;
 
 		@Override
 		public void action() {
 			ServiceDescription filter = new ServiceDescription();
-			filter.setName(AntWorldConsts.SEVICE_NAME);
+			filter.setName(ANTWORLD_SERVICE_NAME);
 			DFAgentDescription dfd = new DFAgentDescription();
 			dfd.addServices(filter);
 

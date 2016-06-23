@@ -42,42 +42,37 @@ public class World implements IWorld {
 
 		return all;
 	}
-
-	@Override
-	public List<CellObject> getAccessibleSuccessors(CellObject cell) {
+	
+	private List<CellObject> getSuccessors(CellObject cell, Predicate<CellObject> p){
 		List<CellObject> successors = new ArrayList<>();
 		int row = cell.getRow();
 		int col = cell.getCol();
 
-		if (get(col - 1, row) != null && get(col - 1, row).getType().isAccessible())
-			successors.add(get(col - 1, row));
-		if (get(col + 1, row) != null && get(col + 1, row).getType().isAccessible())
-			successors.add(get(col + 1, row));
-		if (get(col, row - 1) != null && get(col, row - 1).getType().isAccessible())
-			successors.add(get(col, row - 1));
-		if (get(col, row + 1) != null && get(col, row + 1).getType().isAccessible())
-			successors.add(get(col, row + 1));
+		CellObject s = get(col - 1, row);
+		if (s != null && p.test(s))
+			successors.add(s);
+		s = get(col + 1, row);
+		if (s != null && p.test(s))
+			successors.add(s);
+		s = get(col, row - 1);
+		if (s != null && p.test(s))
+			successors.add(s);
+		s = get(col, row + 1);
+		if (s != null && p.test(s))
+			successors.add(s);
 
 		return successors;
+	}
+
+	@Override
+	public List<CellObject> getAccessibleSuccessors(CellObject cell) {
+		return getSuccessors(cell, c -> c.getType().isAccessible());
 
 	}
 	
 	@Override
 	public List<CellObject> getAllSuccessors(CellObject cell) {
-		List<CellObject> successors = new ArrayList<>();
-		int row = cell.getRow();
-		int col = cell.getCol();
-
-		if (get(col - 1, row) != null)
-			successors.add(get(col - 1, row));
-		if (get(col + 1, row) != null)
-			successors.add(get(col + 1, row));
-		if (get(col, row - 1) != null)
-			successors.add(get(col, row - 1));
-		if (get(col, row + 1) != null)
-			successors.add(get(col, row + 1));
-
-		return successors;
+		return getSuccessors(cell, c -> true);
 	}
 
 	@Override

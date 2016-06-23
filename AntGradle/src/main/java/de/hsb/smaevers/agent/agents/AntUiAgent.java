@@ -67,6 +67,10 @@ public class AntUiAgent extends jade.gui.GuiAgent {
 
 	}
 	
+	/**
+	 * Behaviour which checks for incoming cell update messages and updates the gui
+	 * @author Stephan
+	 */
 	class ReceiveCellMessages extends CyclicBehaviour {
 		public ReceiveCellMessages(AntUiAgent agent) {
 			super(agent);
@@ -93,6 +97,10 @@ public class AntUiAgent extends jade.gui.GuiAgent {
 		}
 	}
 
+	/**
+	 * Behaviour which checks for incoming ant position update messages and updates the gui
+	 * @author Stephan
+	 */
 	class ReceivePosititionMessages extends CyclicBehaviour {
 
 		public ReceivePosititionMessages(AntUiAgent agent) {
@@ -122,6 +130,9 @@ public class AntUiAgent extends jade.gui.GuiAgent {
 
 	}
 
+	/* (non-Javadoc)
+	 * @see jade.gui.GuiAgent#onGuiEvent(jade.gui.GuiEvent)
+	 */
 	@Override
 	protected void onGuiEvent(GuiEvent ev) {
 		switch (ev.getType()) {

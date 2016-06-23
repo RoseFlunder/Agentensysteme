@@ -12,7 +12,7 @@ repositories {
 dependencies {
     compile 'com.google.code.gson:gson:2.7'
     compile 'ch.qos.logback:logback-classic:1.1.7'
-    compile files('extLib/antworld.jar', 'extLib/jade-4.4.0.jar')
+    compile files('extLib/jade-4.4.0.jar')
 
     testCompile 'junit:junit:4.12'
 }

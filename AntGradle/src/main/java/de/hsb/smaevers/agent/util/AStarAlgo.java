@@ -39,12 +39,14 @@ public class AStarAlgo {
 		openList.add(new AStarNode<CellObject>(start, 0));
 
 		AStarNode<CellObject> currentNode = null;
+		boolean pathFound = false;
 		do {
 			// get the next node with the lowest estimated distance to our
 			// destination
 			currentNode = openList.remove();
 			// check if destination is reached
 			if (currentNode.getData().equals(dest)) {
+				pathFound = true;
 				break;
 			}
 
@@ -77,14 +79,17 @@ public class AStarAlgo {
 			}
 		} while (!openList.isEmpty());
 
-		// construct path from the destination nodes predecessors
-		do {
-			path.addFirst(currentNode.getData());
-			currentNode = currentNode.getPredecessor();
-		} while (currentNode != null);
+		if (pathFound){
+			// construct path from the destination nodes predecessors
+			do {
+				path.addFirst(currentNode.getData());
+				currentNode = currentNode.getPredecessor();
+			} while (currentNode != null);
 
-		// remove the first entry because its the starting cell
-		path.removeFirst();
+			// remove the first entry because its the starting cell
+			path.removeFirst();
+		}
+		
 		return path;
 	}
 

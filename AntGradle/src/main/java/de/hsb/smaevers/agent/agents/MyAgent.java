@@ -10,6 +10,7 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +51,9 @@ import jade.lang.acl.MessageTemplate;
 public class MyAgent extends Agent {
 
 	private static final long serialVersionUID = 1L;
+
+	private static final int INCREMENT_RADIUS = 5;
+	private int searchRadius = 3;
 
 	private Logger log;
 	private IWorld world = new World();
@@ -135,14 +139,14 @@ public class MyAgent extends Agent {
 		public void action() {
 			ACLMessage msgUpdate = null;
 			while ((msgUpdate = receive(updateTemplate)) != null) {
-				if (!msgUpdate.getSender().equals(getAID())){
+				if (!msgUpdate.getSender().equals(getAID())) {
 					log.trace("update message received");
 					CellObject cell = gson.fromJson(msgUpdate.getContent(), CellObject.class);
 
 					// check if update is useful
 					CellObject stored = world.get(cell.getCol(), cell.getRow());
 					if (stored == null || (stored.getType() == CellType.UNKOWN && cell.getType() != CellType.UNKOWN)
-							|| cell.getFood() < stored.getFood())
+							|| (cell.getType() == CellType.FREE && cell.getFood() != stored.getFood()))
 						world.put(cell);
 				}
 			}
@@ -282,41 +286,44 @@ public class MyAgent extends Agent {
 			boolean potentialFood = false;
 			for (CellObject n : neighbours) {
 				if (n.getType() != CellType.UNKOWN) {
-					//this eleminates a chance that this cell could be trap
+					// this eleminates a chance that this cell could be trap
 					if (n.getStench() == 0)
 						potentialTrap = false;
-					//here could be food
+					// here could be food
 					if (n.getSmell() - n.getFood() > 0)
 						potentialFood = true;
 				}
 			}
 			cell.setPotentialFood(potentialFood);
 			cell.setPotentialTrap(potentialTrap);
-			
-			//TODO: i could investigate for food also..
-			if (cell.isPotentialTrap()){
-				//Trap detection
+
+			// TODO: i could investigate for food also..
+			if (cell.isPotentialTrap()) {
+				// Trap detection
 				neighbours = world.getAllSuccessors(cell);
-				//iterate over all neighbours of unknown cell
+				// iterate over all neighbours of unknown cell
 				for (CellObject n : neighbours) {
-					//if its neighbour we already visited
-					if (n.getType() == CellType.FREE){
-						//we know that there must be 4 - stench undangerous cells around it
+					// if its neighbour we already visited
+					if (n.getType() == CellType.FREE) {
+						// we know that there must be 4 - stench undangerous
+						// cells around it
 						int nFree = 4 - n.getStench();
-						//so check its other neighbours
+						// so check its other neighbours
 						for (CellObject n2 : world.getAllSuccessors(n)) {
-							//if they are free, decrease the left over number of free cells
-							if (!n2.equals(cell) && !n2.isPotentialTrap() && n2.getType() != CellType.PIT){
+							// if they are free, decrease the left over number
+							// of free cells
+							if (!n2.equals(cell) && !n2.isPotentialTrap() && n2.getType() != CellType.PIT) {
 								--nFree;
 							}
 						}
-						//if all free cells are already known, our cell must be a trap
-						if (nFree == 0){
+						// if all free cells are already known, our cell must be
+						// a trap
+						if (nFree == 0) {
 							cell.setType(CellType.PIT);
 							break;
 						}
 					}
-					
+
 				}
 			}
 		}
@@ -379,8 +386,6 @@ public class MyAgent extends Agent {
 		}
 		// Otherwise search for food
 		else {
-			//TODO: implement to search in a specific radius from the start, increasing it successive when everything is explored
-			
 			// 1. priority: check if the world map knows cell with food
 			List<CellObject> options = world.getCellsWithFood();
 			if (!options.isEmpty()) {
@@ -390,24 +395,49 @@ public class MyAgent extends Agent {
 
 			// 2. priority: check if the world map knows undangerous cell with a
 			// potential for food
-			options = world.getUnvisitedCells(c -> c.isPotentialFood() && !c.isPotentialTrap());
-			if (!options.isEmpty()) {
-				log.debug("Search for path to a potential food cell");
-				return getDirectionToFirstCellFromShortestPath(currentCell, options, true);
-			}
+			List<CellObject> potentialFood = world.getUnvisitedCells(c -> c.isPotentialFood() && !c.isPotentialTrap());
 
 			// 3. priority: check if the world mal knows undangerous cells to
 			// explore
-			options = world.getUnvisitedCells(c -> !c.isPotentialTrap());
-			if (!options.isEmpty()) {
-				log.debug("Search for path to an undangerous cell");
-				return getDirectionToFirstCellFromShortestPath(currentCell, options, true);
+			List<CellObject> unvisitedCells = world.getUnvisitedCells(c -> !c.isPotentialTrap());
+
+			if (!potentialFood.isEmpty() || !unvisitedCells.isEmpty()) {
+				// undangerous should be explored in growing radius from the
+				// start
+				// to find closer food earlier
+				for (; options.isEmpty();) {
+					options = potentialFood.parallelStream()
+							.filter(c -> CellUtils.getHeuristicDistance(c, start) <= searchRadius)
+							.collect(Collectors.toList());
+					if (!options.isEmpty()) {
+						log.debug("Search for path to a potential food cell");
+						return getDirectionToFirstCellFromShortestPath(currentCell, options, true);
+					}
+
+					options = unvisitedCells.parallelStream()
+							.filter(c -> CellUtils.getHeuristicDistance(c, start) <= searchRadius)
+							.collect(Collectors.toList());
+					if (options.isEmpty()) {
+						log.debug("Increment search radious for undangerous cells to {}", searchRadius);
+						searchRadius += INCREMENT_RADIUS;
+					} else {
+						log.debug("Search for path to an undangerous cell");
+						return getDirectionToFirstCellFromShortestPath(currentCell, options, true);
+					}
+				}
 			}
 
-			// 4. priority: try an unknown dangerous cell
+			// 4. priority: try an unknown dangerous cell with potential food
+			options = world.getUnvisitedCells(c -> c.isPotentialFood());
+			if (!options.isEmpty()) {
+				log.debug("Search for path to a potential trap cell with potential food");
+				return getDirectionToFirstCellFromShortestPath(currentCell, options, false);
+			}
+
+			// 5. priority: just try an unknown dangerous cell
 			options = world.getUnvisitedCells(c -> true);
 			if (!options.isEmpty()) {
-				log.debug("Search for path to a potential trap cell");
+				log.debug("Search for path to a potential trap cell with potential food");
 				return getDirectionToFirstCellFromShortestPath(currentCell, options, false);
 			}
 		}
@@ -446,6 +476,10 @@ public class MyAgent extends Agent {
 
 			// search the shortest path with A* to the destionation
 			Queue<CellObject> path = AStarAlgo.getShortestPath(currentCell, dest, world, avoidTraps);
+			if (path.isEmpty()){
+				log.debug("Cannot find a path from {} to {}", currentCell, dest);
+				continue;
+			}
 
 			// if there is a path and its length is shorter to previous shortest
 			// path. clear all previous options and this path is the new
@@ -469,8 +503,11 @@ public class MyAgent extends Agent {
 		log.debug("stopped path finding and found {} options which led to a shortest path to a preferred cell",
 				options.size());
 		// choose an option and determine the direction to move to it
-		CellObject[] optionsArray = options.toArray(new CellObject[options.size()]);
-		return getDirection(currentCell, optionsArray[random.nextInt(optionsArray.length)]);
+		if (!options.isEmpty()) {
+			CellObject[] optionsArray = options.toArray(new CellObject[options.size()]);
+			return getDirection(currentCell, optionsArray[random.nextInt(optionsArray.length)]);
+		}
+		return ActionType.ANT_ACTION_VOID;
 	}
 
 	/**

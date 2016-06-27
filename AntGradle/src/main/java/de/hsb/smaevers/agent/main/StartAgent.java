@@ -23,14 +23,14 @@ import jade.wrapper.AgentController;
  * @author Stephan
  *
  */
-public class StartAgentGui {
+public class StartAgent {
 	
-	private static final Logger LOG = LoggerFactory.getLogger(StartAgentGui.class);
+	private static final Logger LOG = LoggerFactory.getLogger(StartAgent.class);
 	
 	private static Properties getProperties(){
 		Properties props = new Properties();
 		try {
-			props.load(StartAgentGui.class.getClassLoader().getResourceAsStream("connection.properties"));
+			props.load(StartAgent.class.getClassLoader().getResourceAsStream("connection.properties"));
 		} catch (IOException e) {
 			LOG.error(e.getMessage(), e);
 		}

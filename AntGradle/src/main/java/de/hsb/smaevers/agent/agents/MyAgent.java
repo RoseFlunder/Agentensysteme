@@ -133,20 +133,20 @@ public class MyAgent extends Agent {
 
 		@Override
 		public void action() {
-			ACLMessage msgUpdate = receive(updateTemplate);
-			if (msgUpdate != null && !msgUpdate.getSender().equals(getAID())) {
-				log.trace("update message received");
-				CellObject cell = gson.fromJson(msgUpdate.getContent(), CellObject.class);
+			ACLMessage msgUpdate = null;
+			while ((msgUpdate = receive(updateTemplate)) != null) {
+				if (!msgUpdate.getSender().equals(getAID())){
+					log.trace("update message received");
+					CellObject cell = gson.fromJson(msgUpdate.getContent(), CellObject.class);
 
-				// check if update is useful
-				CellObject stored = world.get(cell.getCol(), cell.getRow());
-				if (stored == null || (stored.getType() == CellType.UNKOWN && cell.getType() != CellType.UNKOWN)
-						|| cell.getFood() < stored.getFood())
-					world.put(cell);
-
-			} else {
-				block();
+					// check if update is useful
+					CellObject stored = world.get(cell.getCol(), cell.getRow());
+					if (stored == null || (stored.getType() == CellType.UNKOWN && cell.getType() != CellType.UNKOWN)
+							|| cell.getFood() < stored.getFood())
+						world.put(cell);
+				}
 			}
+			block();
 		}
 	}
 
@@ -379,6 +379,8 @@ public class MyAgent extends Agent {
 		}
 		// Otherwise search for food
 		else {
+			//TODO: implement to search in a specific radius from the start, increasing it successive when everything is explored
+			
 			// 1. priority: check if the world map knows cell with food
 			List<CellObject> options = world.getCellsWithFood();
 			if (!options.isEmpty()) {

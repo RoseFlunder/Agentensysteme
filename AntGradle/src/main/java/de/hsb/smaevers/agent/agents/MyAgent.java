@@ -160,12 +160,11 @@ public class MyAgent extends Agent {
 
 		@Override
 		public void action() {
-			// other messages
 			ACLMessage msg = receive(otherMessages);
 			if (msg != null) {
-				log.trace(msg.toString());
 				// receive messages from antworld
 				if (antworldAgent.equals(msg.getSender())) {
+					log.trace("Received this message from antworld: {}", msg);
 					try {
 						PerceptionObject perception = gson.fromJson(msg.getContent(), PerceptionObject.class);
 						if (perception != null) {
@@ -183,7 +182,14 @@ public class MyAgent extends Agent {
 							}
 							// otherwise do the next turn
 							else {
-								doNextTurn(perception, msg.getReplyWith());
+								ActionType action = getNextTurn(perception);
+								ACLMessage answer = new ACLMessage(ACLMessage.REQUEST);
+								answer.setLanguage("JSON");
+								answer.setInReplyTo(msg.getReplyWith());
+								answer.setContent(gson.toJson(new ActionObject(action, color)));
+								answer.addReceiver(antworldAgent);
+								send(answer);
+								log.trace("Sent message to antworld with content: {}", answer);
 							}
 						}
 
@@ -305,7 +311,7 @@ public class MyAgent extends Agent {
 				for (CellObject n : neighbours) {
 					// if its neighbour we already visited
 					if (n.getType() == CellType.FREE) {
-						// we know that there must be 4 - stench undangerous
+						// we know that there must be (4 - stench) undangerous
 						// cells around it
 						int nFree = 4 - n.getStench();
 						// so check its other neighbours
@@ -336,11 +342,7 @@ public class MyAgent extends Agent {
 	 * @param perception
 	 * @param replyTo
 	 */
-	private void doNextTurn(PerceptionObject perception, String replyTo) {
-		ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
-		msg.setLanguage("JSON");
-		msg.setInReplyTo(replyTo);
-
+	private ActionType getNextTurn(PerceptionObject perception) {
 		ActionType action = null;
 
 		// if the current cell contains food and the ant is not carrying food
@@ -361,11 +363,8 @@ public class MyAgent extends Agent {
 			if (ActionType.ANT_ACTION_VOID == action)
 				doSuspend();
 		}
-
-		msg.setContent(gson.toJson(new ActionObject(action, color)));
-		msg.addReceiver(antworldAgent);
-
-		send(msg);
+		
+		return action;
 	}
 
 	/**

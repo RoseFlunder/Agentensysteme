@@ -1,7 +1,5 @@
 package de.hsb.smaevers.agent.model.json;
 
-import java.util.Objects;
-
 public class CellObject {
 	
 	private int row;
@@ -84,23 +82,33 @@ public class CellObject {
 	}
 
 	@Override
+	public String toString() {
+		return "CellObject [row=" + row + ", col=" + col + ", type=" + type + "]";
+	}
+
+	@Override
 	public int hashCode() {
-		return Objects.hash(row, col);
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + col;
+		result = prime * result + row;
+		return result;
 	}
 
 	@Override
 	public boolean equals(Object obj) {
-		if (obj != null && obj instanceof CellObject){
-			CellObject other = (CellObject) obj;
-			return this.col == other.col && this.row == other.row;
-		}
-		
-		return this.equals(obj);
-	}
-
-	@Override
-	public String toString() {
-		return "CellObject [row=" + row + ", col=" + col + ", type=" + type + "]";
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		CellObject other = (CellObject) obj;
+		if (col != other.col)
+			return false;
+		if (row != other.row)
+			return false;
+		return true;
 	}
 
 }

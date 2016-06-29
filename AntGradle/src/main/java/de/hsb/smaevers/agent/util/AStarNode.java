@@ -67,7 +67,7 @@ public class AStarNode <T> implements Comparable<AStarNode<T>>{
 
 	@Override
 	public boolean equals(Object obj) {
-		if (data != null && obj != null && obj instanceof AStarNode){
+		if (obj != null && obj instanceof AStarNode){
 			AStarNode<?> other = (AStarNode<?>) obj;
 			return data.equals(other.getData());
 		}

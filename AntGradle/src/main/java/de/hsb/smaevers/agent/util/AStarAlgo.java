@@ -7,8 +7,12 @@ import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import de.hsb.smaevers.agent.model.IWorld;
 import de.hsb.smaevers.agent.model.json.CellObject;
+import de.hsb.smaevers.agent.model.json.CellType;
 
 /**
  * A star algo to find the shortest path from a starting cell to a destination
@@ -17,6 +21,8 @@ import de.hsb.smaevers.agent.model.json.CellObject;
  * @author Stephan
  */
 public class AStarAlgo {
+	
+	private static final Logger LOG = LoggerFactory.getLogger(AStarAlgo.class);
 
 	/**
 	 * Retrieves the shortest path
@@ -33,6 +39,7 @@ public class AStarAlgo {
 	 */
 	public static Queue<CellObject> getShortestPath(CellObject start, CellObject dest, IWorld world,
 			boolean avoidTraps) {
+		LOG.debug("Start AStar from {} to {} and avoid traps {}", start, dest, avoidTraps);
 		Deque<CellObject> path = new LinkedList<>();
 		Set<AStarNode<CellObject>> closedList = new HashSet<>();
 		Queue<AStarNode<CellObject>> openList = new PriorityQueue<>();
@@ -56,8 +63,10 @@ public class AStarAlgo {
 			// expand node
 			for (CellObject cell : world.getAccessibleSuccessors(currentNode.getData())) {
 				// skip dangerous cells if requested
-				if (cell.isPotentialTrap() && avoidTraps)
+				if (avoidTraps && (cell.isPotentialTrap() || cell.getType() == CellType.PIT)){
+					LOG.debug("Skipping cell {} because its a potential trap", cell);
 					continue;
+				}
 
 				int hSuc = CellUtils.getHeuristicDistance(start, cell);
 				AStarNode<CellObject> suc = new AStarNode<CellObject>(cell, hSuc);
@@ -88,6 +97,8 @@ public class AStarAlgo {
 
 			// remove the first entry because its the starting cell
 			path.removeFirst();
+		} else {
+			LOG.warn("No path found with AStar from {} to {}, something may be wrong..", start, dest);
 		}
 		
 		return path;

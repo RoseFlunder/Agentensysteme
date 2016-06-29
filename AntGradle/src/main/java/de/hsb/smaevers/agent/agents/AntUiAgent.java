@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import com.google.gson.Gson;
 
 import de.hsb.smaevers.agent.model.json.CellObject;
+import de.hsb.smaevers.agent.model.json.PerceptionObject;
 import de.hsb.smaevers.agent.ui.AntClientUi;
 import jade.core.AID;
 import jade.core.ServiceException;
@@ -115,11 +116,11 @@ public class AntUiAgent extends jade.gui.GuiAgent {
 			ACLMessage msgPosUpdate = receive(updatePositoin);
 			if (msgPosUpdate != null) {
 				LOG.trace("position update received");
-				CellObject cell = gson.fromJson(msgPosUpdate.getContent(), CellObject.class);
+				PerceptionObject p = gson.fromJson(msgPosUpdate.getContent(), PerceptionObject.class);
 				SwingUtilities.invokeLater(new Runnable() {
 					@Override
 					public void run() {
-						antClientUi.updateAntPosition(cell, msgPosUpdate.getSender());
+						antClientUi.updateAntPosition(p, msgPosUpdate.getSender());
 					}
 				});
 				LOG.trace(msgPosUpdate.toString());

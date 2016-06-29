@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import de.hsb.smaevers.agent.agents.AntUiAgent;
 import de.hsb.smaevers.agent.model.json.CellObject;
 import de.hsb.smaevers.agent.model.json.CellType;
+import de.hsb.smaevers.agent.model.json.PerceptionObject;
 import jade.core.AID;
 import jade.gui.GuiEvent;
 
@@ -59,7 +60,7 @@ public class AntClientUi {
 		worldPanel.putTile(cell);
 	}
 	
-	public void updateAntPosition(CellObject cell, AID ant){
+	public void updateAntPosition(PerceptionObject p, AID ant){
 		if (!ants.containsKey(ant.getLocalName())){
 			Ant antComp = new Ant();
 			worldPanel.add(antComp, new Integer(1));
@@ -67,7 +68,8 @@ public class AntClientUi {
 		}
 		
 		Ant antComp = ants.get(ant.getLocalName());
-		antComp.setLocation(cell.getCol(), cell.getRow());
+		antComp.setLocation(p.getCell().getCol(), p.getCell().getRow());
+		antComp.setCarryingBanana(p.getCurrentFood() > 0);
 		antComp.repaint();
 	}
 	

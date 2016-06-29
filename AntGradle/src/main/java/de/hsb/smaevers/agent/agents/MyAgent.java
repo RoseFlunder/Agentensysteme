@@ -53,7 +53,7 @@ public class MyAgent extends Agent {
 	private static final long serialVersionUID = 1L;
 
 	private static final int INCREMENT_RADIUS = 5;
-	private int searchRadius = 3;
+	private int searchRadius = 5;
 
 	private Logger log;
 	private IWorld world = new World();
@@ -124,21 +124,27 @@ public class MyAgent extends Agent {
 	 * 
 	 * @param cell
 	 */
-	private void updateAntPosition(CellObject cell) {
+	private void updateAntPosition(PerceptionObject perception) {
 		ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
 		msg.setLanguage("JSON");
 		msg.addReceiver(updatePositionTopic);
-		msg.setContent(gson.toJson(cell));
+		msg.setContent(gson.toJson(perception));
 		send(msg);
 	}
 
+	/**
+	 * Behaviour the receive update messages from other ants
+	 * 
+	 * @author Stephan
+	 */
 	class ReceiveUpdateMessageBehaviour extends CyclicBehaviour {
 		private static final long serialVersionUID = 1L;
 
 		@Override
 		public void action() {
 			ACLMessage msgUpdate = null;
-			while ((msgUpdate = receive(updateTemplate)) != null) {
+			int messagesCount = 0;
+			while ((msgUpdate = receive(updateTemplate)) != null && ++messagesCount < 20) {
 				if (!msgUpdate.getSender().equals(getAID())) {
 					log.trace("update message received");
 					CellObject cell = gson.fromJson(msgUpdate.getContent(), CellObject.class);
@@ -154,6 +160,12 @@ public class MyAgent extends Agent {
 		}
 	}
 
+	/**
+	 * Behaviour which checks for messages from antworld, updates the world with
+	 * the perception and determines the next action
+	 * 
+	 * @author Stephan
+	 */
 	class ReceiveMessageBehaviour extends CyclicBehaviour {
 
 		private static final long serialVersionUID = 1L;
@@ -172,7 +184,7 @@ public class MyAgent extends Agent {
 								start = perception.getCell();
 							}
 
-							updateAntPosition(perception.getCell());
+							updateAntPosition(perception);
 							gainKnowledgeFromPerception(msg.getPerformative(), perception);
 
 							// delete the agent when its dead
@@ -190,9 +202,11 @@ public class MyAgent extends Agent {
 								answer.addReceiver(antworldAgent);
 								send(answer);
 								log.trace("Sent message to antworld with content: {}", answer);
+
+								if (action == ActionType.ANT_ACTION_VOID)
+									doSuspend();
 							}
 						}
-
 						lastPerception = perception;
 					} catch (JsonSyntaxException e) {
 						log.error(e.getMessage(), e);
@@ -218,7 +232,8 @@ public class MyAgent extends Agent {
 		int col = perception.getCell().getCol();
 
 		// check for obstacle
-		if (performative == ACLMessage.REFUSE && !hasMoved(perception)) {
+		if (performative == ACLMessage.REFUSE && !hasMoved(perception)
+				&& perception.getAction() != ActionType.ANT_ACTION_COLLECT) {
 			int colRock = col;
 			int rowRock = row;
 			switch (perception.getAction()) {
@@ -241,13 +256,13 @@ public class MyAgent extends Agent {
 			log.debug("Found rock at {}|{}", colRock, rowRock);
 			CellObject rock = new CellObject(colRock, rowRock, CellType.OBSTACLE);
 			updateWorldAndPropagteToOthers(rock);
+		} else {
+			// check all neighbour cells and create them if they are unknown
+			createNeighbourIfNotPresentAndUpdateWorld(col - 1, row);
+			createNeighbourIfNotPresentAndUpdateWorld(col + 1, row);
+			createNeighbourIfNotPresentAndUpdateWorld(col, row - 1);
+			createNeighbourIfNotPresentAndUpdateWorld(col, row + 1);
 		}
-
-		// check all neighbour cells and create them if they are unknown
-		createNeighbourIfNotPresentAndUpdateWorld(col - 1, row);
-		createNeighbourIfNotPresentAndUpdateWorld(col + 1, row);
-		createNeighbourIfNotPresentAndUpdateWorld(col, row - 1);
-		createNeighbourIfNotPresentAndUpdateWorld(col, row + 1);
 	}
 
 	/**
@@ -297,7 +312,7 @@ public class MyAgent extends Agent {
 					// this eleminates a chance that this cell could be trap
 					if (n.getStench() == 0)
 						potentialTrap = false;
-					else if (cell.getType() == CellType.UNKOWN) {
+					else if (potentialTrap && cell.getType() != CellType.PIT) {
 						// we know that there must be (4 - stench) undangerous
 						// cells around it
 						int nFree = 4 - n.getStench();
@@ -321,10 +336,7 @@ public class MyAgent extends Agent {
 				}
 			}
 			cell.setPotentialFood(potentialFood);
-			if (cell.getType() == CellType.UNKOWN)
-				cell.setPotentialTrap(potentialTrap);
-
-			// TODO: i could investigate for food also..
+			cell.setPotentialTrap(potentialTrap);
 		}
 	}
 
@@ -396,7 +408,7 @@ public class MyAgent extends Agent {
 				// undangerous should be explored in growing radius from the
 				// start
 				// to find closer food earlier
-				for (; options.isEmpty();) {
+				while (action == null) {
 					options = potentialFood.parallelStream()
 							.filter(c -> CellUtils.getHeuristicDistance(c, start) <= searchRadius)
 							.collect(Collectors.toList());
@@ -481,8 +493,7 @@ public class MyAgent extends Agent {
 			// if there is a path and its length is shorter to previous shortest
 			// path. clear all previous options and this path is the new
 			// reference. Moreover add the first cell from this path as an
-			// option
-			// to visit
+			// option visit
 			if (options.isEmpty() || path.size() < shortestPathLength) {
 				shortestPathLength = path.size();
 				options.clear();

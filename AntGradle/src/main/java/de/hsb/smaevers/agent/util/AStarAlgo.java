@@ -1,8 +1,10 @@
 package de.hsb.smaevers.agent.util;
 
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
@@ -43,6 +45,7 @@ public class AStarAlgo {
 		Deque<CellObject> path = new LinkedList<>();
 		Set<AStarNode<CellObject>> closedList = new HashSet<>();
 		Queue<AStarNode<CellObject>> openList = new PriorityQueue<>();
+		Map<CellObject, AStarNode<CellObject>> map = new HashMap<>();
 		openList.add(new AStarNode<CellObject>(start, 0));
 
 		AStarNode<CellObject> currentNode = null;
@@ -64,12 +67,16 @@ public class AStarAlgo {
 			for (CellObject cell : world.getAccessibleSuccessors(currentNode.getData())) {
 				// skip dangerous cells if requested
 				if (avoidTraps && (cell.isPotentialTrap() || cell.getType() == CellType.PIT)){
-					LOG.debug("Skipping cell {} because its a potential trap", cell);
 					continue;
 				}
 
 				int hSuc = CellUtils.getHeuristicDistance(start, cell);
-				AStarNode<CellObject> suc = new AStarNode<CellObject>(cell, hSuc);
+				AStarNode<CellObject> suc = map.get(cell);
+				if (suc == null) {
+					suc = new AStarNode<CellObject>(cell, hSuc);
+					map.put(cell, suc);
+				}
+				
 				if (closedList.contains(suc))
 					continue;
 				int tentativeG = currentNode.getG() + 1;
@@ -103,5 +110,4 @@ public class AStarAlgo {
 		
 		return path;
 	}
-
 }

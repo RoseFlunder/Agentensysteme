@@ -144,6 +144,7 @@ public class AntUiAgent extends jade.gui.GuiAgent {
 
 			try {
 				getContainerController().kill();
+				doDelete();
 			} catch (StaleProxyException e) {
 				LOG.error(e.getMessage(), e);
 			}

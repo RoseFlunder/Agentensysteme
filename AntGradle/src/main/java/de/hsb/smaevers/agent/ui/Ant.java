@@ -9,6 +9,8 @@ import java.io.IOException;
 import javax.imageio.ImageIO;
 import javax.swing.JComponent;
 
+import de.hsb.smaevers.agent.model.json.PerceptionObject;
+
 /**
  * Represents an ant in the UI
  * @author Stephan
@@ -32,7 +34,7 @@ public class Ant extends JComponent {
 		}
 	}
 	
-	private boolean carryingBanana = false;
+	private PerceptionObject perception;
 	
 	public Ant() {
 		setSize(WIDTH, HEIGHT);
@@ -42,7 +44,7 @@ public class Ant extends JComponent {
 	protected void paintComponent(Graphics g) {
 		Graphics2D g2 = (Graphics2D) g;
 		
-		if (isCarryingBanana())
+		if (perception.getCurrentFood() > 0)
 			g2.drawImage(imgWithBanana, 0, 0, null);
 		else
 			g2.drawImage(img, 0, 0, null);
@@ -58,14 +60,11 @@ public class Ant extends JComponent {
 		super.setLocation(x * WIDTH, y * HEIGHT);
 	}
 
-	public boolean isCarryingBanana() {
-		return carryingBanana;
+	public PerceptionObject getPerception() {
+		return perception;
 	}
 
-	public void setCarryingBanana(boolean carryingBanana) {
-		this.carryingBanana = carryingBanana;
+	public void setPerception(PerceptionObject perception) {
+		this.perception = perception;
 	}
-	
-	
-
 }

@@ -316,18 +316,23 @@ public class MyAgent extends Agent {
 						// we know that there must be (4 - stench) undangerous
 						// cells around it
 						int nFree = 4 - n.getStench();
+						int nTraps = n.getStench();
 						// so check its other neighbours
 						for (CellObject n2 : world.getAllSuccessors(n)) {
 							// if they are free, decrease the left over number
 							// of free cells
 							if (!n2.equals(cell) && !n2.isPotentialTrap() && n2.getType() != CellType.PIT) {
 								--nFree;
+							} else if (!n2.equals(cell) && n2.getType() == CellType.PIT){
+								--nTraps;
 							}
 						}
 						// if all free cells are already known, our cell must be
 						// a trap
 						if (nFree == 0) {
 							cell.setType(CellType.PIT);
+						} else if (nTraps == 0){
+							potentialTrap = false;
 						}
 					}
 					// here could be food
@@ -421,7 +426,7 @@ public class MyAgent extends Agent {
 							.filter(c -> CellUtils.getHeuristicDistance(c, start) <= searchRadius)
 							.collect(Collectors.toList());
 					if (options.isEmpty()) {
-						log.debug("Increment search radious for undangerous cells to {}", searchRadius);
+						log.debug("Increment search radius for cells to {}", searchRadius);
 						searchRadius += INCREMENT_RADIUS;
 					} else {
 						log.debug("Search for path to an undangerous cell");

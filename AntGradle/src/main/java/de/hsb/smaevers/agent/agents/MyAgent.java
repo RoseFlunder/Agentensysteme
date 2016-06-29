@@ -287,30 +287,15 @@ public class MyAgent extends Agent {
 	 */
 	private void updateCellWithNeighbourInfos(CellObject cell) {
 		if (cell.getType() == CellType.UNKOWN) {
-			List<CellObject> neighbours = world.getAccessibleSuccessors(cell);
+			List<CellObject> neighbours = world.getAllSuccessors(cell);
 			boolean potentialTrap = true;
 			boolean potentialFood = false;
 			for (CellObject n : neighbours) {
-				if (n.getType() != CellType.UNKOWN) {
+				if (n.getType() == CellType.FREE || n.getType() == CellType.START) {
 					// this eleminates a chance that this cell could be trap
 					if (n.getStench() == 0)
 						potentialTrap = false;
-					// here could be food
-					if (n.getSmell() - n.getFood() > 0)
-						potentialFood = true;
-				}
-			}
-			cell.setPotentialFood(potentialFood);
-			cell.setPotentialTrap(potentialTrap);
-
-			// TODO: i could investigate for food also..
-			if (cell.isPotentialTrap()) {
-				// Trap detection
-				neighbours = world.getAllSuccessors(cell);
-				// iterate over all neighbours of unknown cell
-				for (CellObject n : neighbours) {
-					// if its neighbour we already visited
-					if (n.getType() == CellType.FREE) {
+					else if (cell.getType() == CellType.UNKOWN) {
 						// we know that there must be (4 - stench) undangerous
 						// cells around it
 						int nFree = 4 - n.getStench();
@@ -326,12 +311,18 @@ public class MyAgent extends Agent {
 						// a trap
 						if (nFree == 0) {
 							cell.setType(CellType.PIT);
-							break;
 						}
 					}
-
+					// here could be food
+					if (n.getSmell() - n.getFood() > 0)
+						potentialFood = true;
 				}
 			}
+			cell.setPotentialFood(potentialFood);
+			if (cell.getType() == CellType.UNKOWN)
+				cell.setPotentialTrap(potentialTrap);
+
+			// TODO: i could investigate for food also..
 		}
 	}
 
@@ -360,10 +351,8 @@ public class MyAgent extends Agent {
 		else {
 			action = getNextDirectionToMove(perception);
 			log.debug("Next direction: {}", action);
-			if (ActionType.ANT_ACTION_VOID == action)
-				doSuspend();
 		}
-		
+
 		return action;
 	}
 
@@ -392,6 +381,7 @@ public class MyAgent extends Agent {
 				return getDirectionToFirstCellFromShortestPath(currentCell, options, true);
 			}
 
+			ActionType action = null;
 			// 2. priority: check if the world map knows undangerous cell with a
 			// potential for food
 			List<CellObject> potentialFood = world.getUnvisitedCells(c -> c.isPotentialFood() && !c.isPotentialTrap());
@@ -410,7 +400,7 @@ public class MyAgent extends Agent {
 							.collect(Collectors.toList());
 					if (!options.isEmpty()) {
 						log.debug("Search for path to a potential food cell");
-						return getDirectionToFirstCellFromShortestPath(currentCell, options, true);
+						action = getDirectionToFirstCellFromShortestPath(currentCell, options, true);
 					}
 
 					options = unvisitedCells.parallelStream()
@@ -421,27 +411,34 @@ public class MyAgent extends Agent {
 						searchRadius += INCREMENT_RADIUS;
 					} else {
 						log.debug("Search for path to an undangerous cell");
-						return getDirectionToFirstCellFromShortestPath(currentCell, options, true);
+						action = getDirectionToFirstCellFromShortestPath(currentCell, options, true);
 					}
 				}
 			}
 
-			// 4. priority: try an unknown dangerous cell with potential food
-			options = world.getUnvisitedCells(c -> c.isPotentialFood());
-			if (!options.isEmpty()) {
-				log.debug("Search for path to a potential trap cell with potential food");
-				return getDirectionToFirstCellFromShortestPath(currentCell, options, false);
+			if (action == null || action == ActionType.ANT_ACTION_VOID) {
+				// 4. priority: try an unknown dangerous cell with potential
+				// food
+				options = world.getUnvisitedCells(c -> c.isPotentialFood());
+				if (!options.isEmpty()) {
+					log.debug("Search for path to a potential trap cell with potential food");
+					action = getDirectionToFirstCellFromShortestPath(currentCell, options, false);
+				}
 			}
 
-			// 5. priority: just try an unknown dangerous cell
-			options = world.getUnvisitedCells(c -> true);
-			if (!options.isEmpty()) {
-				log.debug("Search for path to a potential trap cell with potential food");
-				return getDirectionToFirstCellFromShortestPath(currentCell, options, false);
+			if (action == null || action == ActionType.ANT_ACTION_VOID) {
+				// 5. priority: just try an unknown dangerous cell
+				options = world.getUnvisitedCells(c -> true);
+				if (!options.isEmpty()) {
+					log.debug("Search for path to a potential trap cell");
+					action = getDirectionToFirstCellFromShortestPath(currentCell, options, false);
+				}
 			}
+
+			if (action == null)
+				action = ActionType.ANT_ACTION_VOID;
+			return action;
 		}
-		log.error("Ant is clueless where to move next");
-		return ActionType.ANT_ACTION_VOID;
 	}
 
 	/**
@@ -466,16 +463,15 @@ public class MyAgent extends Agent {
 		Iterator<CellObject> iterator = cells.iterator();
 		int shortestPathLength = 0;
 		Set<CellObject> options = new HashSet<>();
-		CellObject dest = null;
+		CellObject dest = iterator.next();
 
 		// iterate over all destinations
 		do {
-			dest = iterator.next();
 			log.debug("Search path from {} to {}", currentCell, dest);
 
 			// search the shortest path with A* to the destionation
 			Queue<CellObject> path = AStarAlgo.getShortestPath(currentCell, dest, world, avoidTraps);
-			if (path.isEmpty()){
+			if (path.isEmpty()) {
 				log.debug("Cannot find a path from {} to {}", currentCell, dest);
 				continue;
 			}
@@ -485,7 +481,7 @@ public class MyAgent extends Agent {
 			// reference. Moreover add the first cell from this path as an
 			// option
 			// to visit
-			if (shortestPathLength == 0 || path.size() < shortestPathLength) {
+			if (options.isEmpty() || path.size() < shortestPathLength) {
 				shortestPathLength = path.size();
 				options.clear();
 				options.add(path.peek());
@@ -497,7 +493,8 @@ public class MyAgent extends Agent {
 
 			// try next possible destination until the manhatten distance makes
 			// it unpossible to find a shorther path
-		} while (iterator.hasNext() && CellUtils.getHeuristicDistance(currentCell, dest) <= shortestPathLength);
+		} while (iterator.hasNext() && (options.isEmpty()
+				| CellUtils.getHeuristicDistance(currentCell, (dest = iterator.next())) <= shortestPathLength));
 
 		log.debug("stopped path finding and found {} options which led to a shortest path to a preferred cell",
 				options.size());

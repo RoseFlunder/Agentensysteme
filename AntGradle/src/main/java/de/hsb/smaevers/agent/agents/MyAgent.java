@@ -219,25 +219,27 @@ public class MyAgent extends Agent {
 
 		// check for obstacle
 		if (performative == ACLMessage.REFUSE && !hasMoved(perception)) {
+			int colRock = col;
+			int rowRock = row;
 			switch (perception.getAction()) {
 			case ANT_ACTION_UP:
-				--row;
+				--rowRock;
 				break;
 			case ANT_ACTION_DOWN:
-				++row;
+				++rowRock;
 				break;
 			case ANT_ACTION_LEFT:
-				--col;
+				--colRock;
 				break;
 			case ANT_ACTION_RIGHT:
-				++col;
+				++colRock;
 				break;
 
 			default:
 				break;
 			}
-			log.debug("Found rock at {}|{}", col, row);
-			CellObject rock = new CellObject(col, row, CellType.OBSTACLE);
+			log.debug("Found rock at {}|{}", colRock, rowRock);
+			CellObject rock = new CellObject(colRock, rowRock, CellType.OBSTACLE);
 			updateWorldAndPropagteToOthers(rock);
 		}
 

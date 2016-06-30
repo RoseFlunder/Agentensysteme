@@ -41,8 +41,8 @@ public class World implements IWorld {
 
 	/**
 	 * Returns all cells that match the given predicate
-	 * @param p
-	 * @return
+	 * @param p predicate to match
+	 * @return {@link List} of cells
 	 */
 	private List<CellObject> getAllCells(Predicate<CellObject> p) {
 		List<CellObject> all = new ArrayList<>();
@@ -56,9 +56,9 @@ public class World implements IWorld {
 	
 	/**
 	 * Returns all neighbours which match the given predicate
-	 * @param cell
-	 * @param p
-	 * @return
+	 * @param cell cell
+	 * @param p predicate
+	 * @return {@link List} of direct successors
 	 */
 	private List<CellObject> getSuccessors(CellObject cell, Predicate<CellObject> p){
 		List<CellObject> successors = new ArrayList<>();

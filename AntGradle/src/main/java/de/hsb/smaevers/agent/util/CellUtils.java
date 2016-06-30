@@ -10,10 +10,10 @@ public final class CellUtils {
 
 	/**
 	 * Calculates the manhatten distance between the two given cells
-	 * @param c1
-	 * @param c2
+	 * @param c1 first cell
+	 * @param c2 second cell
 	 * @return manhatten distance
-	 * @throws IllegalArgumentException
+	 * @throws IllegalArgumentException when one of the arguments is null
 	 */
 	public static int getHeuristicDistance(CellObject c1, CellObject c2) throws IllegalArgumentException {
 		if (c1 == null || c2 == null)

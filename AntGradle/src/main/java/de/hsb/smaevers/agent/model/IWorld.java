@@ -14,7 +14,7 @@ public interface IWorld {
 	
 	/**
 	 * Adds a new Cell to the datastructure
-	 * @param cell
+	 * @param cell Cell to insert into the world map
 	 */
 	public void put(CellObject cell);
 
@@ -28,28 +28,28 @@ public interface IWorld {
 	
 	/**
 	 * Gets all neighbours which are accessible, so no traps and no obstacles
-	 * @param cell
+	 * @param cell cell for which the successors should be returned
 	 * @return {@link List} of neighbour cells
 	 */
 	public List<CellObject> getAccessibleSuccessors(CellObject cell);
 	
 	/**
 	 * Returns all neighbours of the given cell
-	 * @param cell
-	 * @return
+	 * @param cell Cell
+	 * @return {@link List} of direct successors
 	 */
 	public List<CellObject> getAllSuccessors(CellObject cell);
 	
 	/**
 	 * Returns all unvisited cells, {@link CellType} UNKOWN, that match the given predicate
-	 * @param p
-	 * @return
+	 * @param p Predicate which must match for the returned cells
+	 * @return {@link List} of UNKNOWN cells
 	 */
 	public List<CellObject> getUnvisitedCells(Predicate<CellObject> p);
 	
 	/**
-	 * Returns als known cells with food > 0
-	 * @return
+	 * Returns als known cells with food
+	 * @return {@link List} of cells which contains food
 	 */
 	public List<CellObject> getCellsWithFood();
 	

@@ -37,11 +37,11 @@ public class AStarAlgo {
 	 *            World map to get eachs cells successors
 	 * @param avoidTraps
 	 *            Flag if potential traps should be avoided
-	 * @return
+	 * @return {@link Queue} with the shortest path
 	 */
 	public static Queue<CellObject> getShortestPath(CellObject start, CellObject dest, IWorld world,
 			boolean avoidTraps) {
-		LOG.debug("Start AStar from {} to {} and avoid traps {}", start, dest, avoidTraps);
+		LOG.trace("Start AStar from {} to {} and avoid traps {}", start, dest, avoidTraps);
 		Deque<CellObject> path = new LinkedList<>();
 		Set<AStarNode<CellObject>> closedList = new HashSet<>();
 		Queue<AStarNode<CellObject>> openList = new PriorityQueue<>();

@@ -109,7 +109,7 @@ public class MyAgent extends Agent {
 	 * Updates the local world map with the given cell and sends the cell to all
 	 * other agents
 	 * 
-	 * @param cell
+	 * @param cell Cell which will be put into the map and sent to the others
 	 */
 	private void updateWorldAndPropagteToOthers(CellObject cell) {
 		world.put(cell);
@@ -126,7 +126,7 @@ public class MyAgent extends Agent {
 	/**
 	 * Sends the current position of this ant to all other ants
 	 * 
-	 * @param cell
+	 * @param perception current Perception
 	 */
 	private void updateAntPosition(PerceptionObject perception) {
 		ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
@@ -231,8 +231,8 @@ public class MyAgent extends Agent {
 	 * Gets the current perception and uses its information to update the world
 	 * map.
 	 * 
-	 * @param performative
-	 * @param perception
+	 * @param performative performative of the received message
+	 * @param perception current perception
 	 */
 	private void gainKnowledgeFromPerception(int performative, PerceptionObject perception) {
 		// updates the world with the information of the current cell
@@ -277,8 +277,8 @@ public class MyAgent extends Agent {
 	/**
 	 * Checks if the ant has moved since the last turn
 	 * 
-	 * @param currentPerception
-	 * @return
+	 * @param currentPerception perception
+	 * @return <code>true</code> if the ant has moved, <code>false</code> otherweise
 	 */
 	private boolean hasMoved(PerceptionObject currentPerception) {
 		if (lastPerception != null && lastPerception.getCell() != null && currentPerception != null
@@ -293,8 +293,8 @@ public class MyAgent extends Agent {
 	 * Checks if a cell if the given coordinates exists and creates it if not
 	 * and updates the world map.
 	 * 
-	 * @param col
-	 * @param row
+	 * @param col column of the neighbour
+	 * @param row row of the neighbour
 	 */
 	private void createNeighbourIfNotPresentAndUpdateWorld(int col, int row) {
 		CellObject cell = world.get(col, row);
@@ -310,7 +310,7 @@ public class MyAgent extends Agent {
 	 * Gathers knowledge for a unknown cell from its known neighbours using
 	 * their stench and smell
 	 * 
-	 * @param cell
+	 * @param cell cell which should be investigated with its neighbours
 	 */
 	private void updateCellWithNeighbourInfos(CellObject cell) {
 		if (cell.getType() == CellType.UNKOWN) {
@@ -377,9 +377,8 @@ public class MyAgent extends Agent {
 	/**
 	 * After knowledge is gained this method is called to determine what to do
 	 * next and sends the next turn to antworld.
-	 * 
-	 * @param perception
-	 * @param replyTo
+	 * @param perception current perception
+	 * @return action what to do next
 	 */
 	private ActionType getNextTurn(PerceptionObject perception) {
 		ActionType action = null;
@@ -407,7 +406,7 @@ public class MyAgent extends Agent {
 	/**
 	 * Determines the next direction for the current turn
 	 * 
-	 * @param perception
+	 * @param perception current perception
 	 * @return Action describing the direction
 	 */
 	private ActionType getNextDirectionToMove(PerceptionObject perception) {
@@ -501,7 +500,7 @@ public class MyAgent extends Agent {
 	}
 
 	/**
-	 * 
+	 * Gets the first direction as an action to move the first cell of a shortest path for the given options
 	 * 
 	 * @param currentCell
 	 *            current ant position
@@ -526,7 +525,7 @@ public class MyAgent extends Agent {
 
 		// iterate over all destinations
 		do {
-			log.debug("Search path from {} to {}", currentCell, dest);
+			log.trace("Search path from {} to {}", currentCell, dest);
 
 			// search the shortest path with A* to the destionation
 			Queue<CellObject> path = AStarAlgo.getShortestPath(currentCell, dest, world, avoidTraps);
@@ -568,9 +567,9 @@ public class MyAgent extends Agent {
 	 * Gets a direction to move furter from the first, the second cell. Usually
 	 * this method should be only called for cells which connected directly.
 	 * 
-	 * @param from
-	 * @param to
-	 * @return
+	 * @param from start cell
+	 * @param to destination cell
+	 * @return Action describing the direction
 	 */
 	private ActionType getDirection(CellObject from, CellObject to) {
 		log.debug("Get direction from {} to {}", from, to);

@@ -51,6 +51,8 @@ import jade.lang.acl.MessageTemplate;
  */
 public class MyAgent extends Agent {
 
+	private static final String JSON = "JSON";
+
 	private static final long serialVersionUID = 1L;
 
 	private static final int INCREMENT_RADIUS = 5;
@@ -114,7 +116,7 @@ public class MyAgent extends Agent {
 		world.put(cell);
 
 		ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
-		msg.setLanguage("JSON");
+		msg.setLanguage(JSON);
 		msg.addReceiver(updateWorldTopic);
 		msg.setContent(gson.toJson(cell));
 		send(msg);
@@ -127,7 +129,7 @@ public class MyAgent extends Agent {
 	 */
 	private void updateAntPosition(PerceptionObject perception) {
 		ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
-		msg.setLanguage("JSON");
+		msg.setLanguage(JSON);
 		msg.addReceiver(updatePositionTopic);
 		msg.setContent(gson.toJson(perception));
 		send(msg);
@@ -203,7 +205,7 @@ public class MyAgent extends Agent {
 							else {
 								ActionType action = getNextTurn(perception);
 								ACLMessage answer = new ACLMessage(ACLMessage.REQUEST);
-								answer.setLanguage("JSON");
+								answer.setLanguage(JSON);
 								answer.setInReplyTo(msg.getReplyWith());
 								answer.setContent(gson.toJson(new ActionObject(action, color)));
 								answer.addReceiver(antworldAgent);
@@ -572,7 +574,7 @@ public class MyAgent extends Agent {
 					ACLMessage message = new ACLMessage(ACLMessage.REQUEST);
 					message.setSender(myAgent.getAID());
 					message.addReceiver(other.getName());
-					message.setLanguage("JSON");
+					message.setLanguage(JSON);
 
 					Gson gson = new Gson();
 					ActionObject loginbody = new ActionObject(ActionType.ANT_ACTION_LOGIN, color);

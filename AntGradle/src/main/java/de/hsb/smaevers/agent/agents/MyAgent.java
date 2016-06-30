@@ -94,7 +94,6 @@ public class MyAgent extends Agent {
 			hlp.register(updateWorldTopic);
 
 			updateTemplate = MessageTemplate.MatchTopic(updateWorldTopic);
-			otherMessages = MessageTemplate.not(updateTemplate);
 
 			// add behaviours
 			addBehaviour(new ReceiveUpdateMessageBehaviour());
@@ -120,6 +119,8 @@ public class MyAgent extends Agent {
 		msg.addReceiver(updateWorldTopic);
 		msg.setContent(gson.toJson(cell));
 		send(msg);
+
+		log.trace("Updated world and sent this cell to the other ants {}, cell");
 	}
 
 	/**
@@ -133,6 +134,7 @@ public class MyAgent extends Agent {
 		msg.addReceiver(updatePositionTopic);
 		msg.setContent(gson.toJson(perception));
 		send(msg);
+		log.trace("Sent current perception to gui");
 	}
 
 	/**
@@ -149,22 +151,23 @@ public class MyAgent extends Agent {
 			Queue<ACLMessage> messageQueue = new LinkedList<>();
 			while ((msgUpdate = receive(updateTemplate)) != null) {
 				if (!msgUpdate.getSender().equals(getAID())) {
-					log.trace("update message received");
+					log.trace("update message received: {}", msgUpdate);
 					messageQueue.add(msgUpdate);
 				}
 			}
-			
+
+			// iterate over messages and update the GUI
 			for (ACLMessage message : messageQueue) {
 				CellObject cell = gson.fromJson(message.getContent(), CellObject.class);
 
 				// check if update is useful
 				CellObject stored = world.get(cell.getCol(), cell.getRow());
 				if (stored == null || (stored.getType() == CellType.UNKOWN && cell.getType() != CellType.UNKOWN)
-						|| (cell.getType() == CellType.FREE && cell.getFood() != stored.getFood()))
+						|| (cell.getType() == CellType.FREE && cell.getFood() != stored.getFood())) {
+					log.trace("update world with cell: {}", cell);
 					world.put(cell);
-
+				}
 			}
-			
 			block();
 		}
 	}
@@ -183,43 +186,40 @@ public class MyAgent extends Agent {
 		public void action() {
 			ACLMessage msg = receive(otherMessages);
 			if (msg != null) {
-				// receive messages from antworld
-				if (antworldAgent.equals(msg.getSender())) {
-					log.trace("Received this message from antworld: {}", msg);
-					try {
-						PerceptionObject perception = gson.fromJson(msg.getContent(), PerceptionObject.class);
-						if (perception != null) {
-							if (start == null && perception.getCell().getType() == CellType.START) {
-								start = perception.getCell();
-							}
-
-							updateAntPosition(perception);
-							gainKnowledgeFromPerception(msg.getPerformative(), perception);
-
-							// delete the agent when its dead
-							if (perception.getState() == AntState.DEAD) {
-								log.debug("Agent is dead and will be deleted");
-								MyAgent.this.doDelete();
-							}
-							// otherwise do the next turn
-							else {
-								ActionType action = getNextTurn(perception);
-								ACLMessage answer = new ACLMessage(ACLMessage.REQUEST);
-								answer.setLanguage(JSON);
-								answer.setInReplyTo(msg.getReplyWith());
-								answer.setContent(gson.toJson(new ActionObject(action, color)));
-								answer.addReceiver(antworldAgent);
-								send(answer);
-								log.trace("Sent message to antworld with content: {}", answer);
-
-								if (action == ActionType.ANT_ACTION_VOID)
-									doSuspend();
-							}
+				log.trace("Received this message from antworld: {}", msg);
+				try {
+					PerceptionObject perception = gson.fromJson(msg.getContent(), PerceptionObject.class);
+					if (perception != null) {
+						if (start == null && perception.getCell().getType() == CellType.START) {
+							start = perception.getCell();
 						}
-						lastPerception = perception;
-					} catch (JsonSyntaxException e) {
-						log.error(e.getMessage(), e);
+
+						updateAntPosition(perception);
+						gainKnowledgeFromPerception(msg.getPerformative(), perception);
+
+						// delete the agent when its dead
+						if (perception.getState() == AntState.DEAD) {
+							log.debug("Agent is dead and will be deleted");
+							MyAgent.this.doDelete();
+						}
+						// otherwise do the next turn
+						else {
+							ActionType action = getNextTurn(perception);
+							ACLMessage answer = new ACLMessage(ACLMessage.REQUEST);
+							answer.setLanguage(JSON);
+							answer.setInReplyTo(msg.getReplyWith());
+							answer.setContent(gson.toJson(new ActionObject(action, color)));
+							answer.addReceiver(antworldAgent);
+							send(answer);
+							log.trace("Sent message to antworld with content: {}", answer);
+
+							if (action == ActionType.ANT_ACTION_VOID)
+								doSuspend();
+						}
 					}
+					lastPerception = perception;
+				} catch (JsonSyntaxException e) {
+					log.error(e.getMessage(), e);
 				}
 			} else {
 				block();
@@ -300,6 +300,7 @@ public class MyAgent extends Agent {
 		CellObject cell = world.get(col, row);
 		if (cell == null) {
 			cell = new CellObject(col, row, CellType.UNKOWN);
+			log.trace("Created new unknown cell at {}", cell);
 		}
 		updateCellWithNeighbourInfos(cell);
 		updateWorldAndPropagteToOthers(cell);
@@ -313,40 +314,59 @@ public class MyAgent extends Agent {
 	 */
 	private void updateCellWithNeighbourInfos(CellObject cell) {
 		if (cell.getType() == CellType.UNKOWN) {
+			log.trace("Updating unknown cell {} with its neighbour informations", cell);
 			List<CellObject> neighbours = world.getAllSuccessors(cell);
 			boolean potentialTrap = true;
 			boolean potentialFood = false;
 			for (CellObject n : neighbours) {
 				if (n.getType() == CellType.FREE || n.getType() == CellType.START) {
 					// this eleminates a chance that this cell could be trap
-					if (n.getStench() == 0)
+					if (n.getStench() == 0) {
+						log.trace("Neighbour {} has no stench, {} must not be a trap", n, cell);
 						potentialTrap = false;
-					else if (potentialTrap && cell.getType() != CellType.PIT) {
-						// we know that there must be (4 - stench) undangerous
-						// cells around it
-						int nFree = 4 - n.getStench();
-						int nTraps = n.getStench();
-						// so check its other neighbours
-						for (CellObject n2 : world.getAllSuccessors(n)) {
-							// if they are free, decrease the left over number
-							// of free cells
-							if (!n2.equals(cell) && !n2.isPotentialTrap() && n2.getType() != CellType.PIT) {
-								--nFree;
-							} else if (!n2.equals(cell) && n2.getType() == CellType.PIT){
-								--nTraps;
+					} else if (potentialTrap && cell.getType() != CellType.PIT) {
+						boolean somethingChanged = false;
+
+						do {
+							// we know that there must be (4 - stench)
+							// undangerous
+							// cells around it
+							int nFree = 4 - n.getStench();
+							int nTraps = n.getStench();
+							// so check its other neighbours
+							for (CellObject n2 : world.getAllSuccessors(n)) {
+								// if they are free, decrease the left over
+								// number
+								// of free cells
+								if (!n2.equals(cell) && !n2.isPotentialTrap() && n2.getType() != CellType.PIT) {
+									--nFree;
+								} else if (!n2.equals(cell) && n2.getType() == CellType.PIT) {
+									--nTraps;
+								}
 							}
-						}
-						// if all free cells are already known, our cell must be
-						// a trap
-						if (nFree == 0) {
-							cell.setType(CellType.PIT);
-						} else if (nTraps == 0){
-							potentialTrap = false;
-						}
+							// if all free cells are already known, our cell
+							// must be
+							// a trap
+							if (nFree == 0 && cell.getType() != CellType.PIT) {
+								log.trace("{} must be a trap because all free cells around {} are already known", cell,
+										n);
+								cell.setType(CellType.PIT);
+								somethingChanged = true;
+							} else if (nTraps == 0 && potentialTrap) {
+								log.trace("{} cannot be trap because all traps around {} are already known", cell, n);
+								potentialTrap = false;
+								somethingChanged = true;
+							} else {
+								somethingChanged = false;
+							}
+						} while (somethingChanged);
+
 					}
 					// here could be food
-					if (n.getSmell() - n.getFood() > 0)
+					if (n.getSmell() - n.getFood() > 0) {
+						log.trace("{} could contain food because {} has smell", cell, n);
 						potentialFood = true;
+					}
 				}
 			}
 			cell.setPotentialFood(potentialFood);
@@ -372,7 +392,7 @@ public class MyAgent extends Agent {
 		}
 		// if the ant is carrying food and has reached the start cell, drop it
 		else if (perception.getCurrentFood() > 0 && perception.getCell().getType() == CellType.START) {
-			log.debug("Droping food at start");
+			log.debug("Dropping food at start");
 			action = ActionType.ANT_ACTION_DROP;
 		}
 		// otherwise determine which cell should get visited next
@@ -417,6 +437,14 @@ public class MyAgent extends Agent {
 			// 3. priority: check if the world mal knows undangerous cells to
 			// explore
 			List<CellObject> unvisitedCells = world.getUnvisitedCells(c -> !c.isPotentialTrap());
+
+			if (potentialFood.isEmpty() && unvisitedCells.isEmpty()) {
+				for (CellObject c : world.getUnvisitedCells(c -> c.isPotentialTrap())) {
+					updateCellWithNeighbourInfos(c);
+				}
+				potentialFood = world.getUnvisitedCells(c -> c.isPotentialFood() && !c.isPotentialTrap());
+				unvisitedCells = world.getUnvisitedCells(c -> !c.isPotentialTrap());
+			}
 
 			if (!potentialFood.isEmpty() || !unvisitedCells.isEmpty()) {
 				// undangerous should be explored in growing radius from the
@@ -463,8 +491,11 @@ public class MyAgent extends Agent {
 				}
 			}
 
-			if (action == null)
+			if (action == null) {
 				action = ActionType.ANT_ACTION_VOID;
+				log.debug("No more cells to investigate");
+			}
+
 			return action;
 		}
 	}
@@ -570,6 +601,7 @@ public class MyAgent extends Agent {
 				for (DFAgentDescription other : results) {
 					log.debug("Found antword agent agent: {}", other.getName().getLocalName());
 					antworldAgent = other.getName();
+					otherMessages = MessageTemplate.MatchSender(antworldAgent);
 
 					ACLMessage message = new ACLMessage(ACLMessage.REQUEST);
 					message.setSender(myAgent.getAID());

@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.Random;
@@ -143,19 +144,25 @@ public class MyAgent extends Agent {
 		@Override
 		public void action() {
 			ACLMessage msgUpdate = null;
-			int messagesCount = 0;
-			while ((msgUpdate = receive(updateTemplate)) != null && ++messagesCount < 20) {
+			Queue<ACLMessage> messageQueue = new LinkedList<>();
+			while ((msgUpdate = receive(updateTemplate)) != null) {
 				if (!msgUpdate.getSender().equals(getAID())) {
 					log.trace("update message received");
-					CellObject cell = gson.fromJson(msgUpdate.getContent(), CellObject.class);
-
-					// check if update is useful
-					CellObject stored = world.get(cell.getCol(), cell.getRow());
-					if (stored == null || (stored.getType() == CellType.UNKOWN && cell.getType() != CellType.UNKOWN)
-							|| (cell.getType() == CellType.FREE && cell.getFood() != stored.getFood()))
-						world.put(cell);
+					messageQueue.add(msgUpdate);
 				}
 			}
+			
+			for (ACLMessage message : messageQueue) {
+				CellObject cell = gson.fromJson(message.getContent(), CellObject.class);
+
+				// check if update is useful
+				CellObject stored = world.get(cell.getCol(), cell.getRow());
+				if (stored == null || (stored.getType() == CellType.UNKOWN && cell.getType() != CellType.UNKOWN)
+						|| (cell.getType() == CellType.FREE && cell.getFood() != stored.getFood()))
+					world.put(cell);
+
+			}
+			
 			block();
 		}
 	}
